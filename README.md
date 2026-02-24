@@ -66,7 +66,7 @@
 - Títulos y nombre de marca: **Playfair Display**
 - Cuerpo de texto y navegación: **Poppins**
 
-> Consultar [`marca_viviana.docx`](./marca_viviana.docx) para el manual completo de estilo
+> Consultar [`marca_viviana.docx`](./marca_viviana.docx.pdf) para el manual completo de estilo
 
 ### Style Tiles
 Componentes UI validados: botones, formularios, tarjetas, iconografía y estados visuales (hover, activo, deshabilitado, error).
@@ -129,9 +129,9 @@ Diseño de alta fidelidad en versión móvil y desktop para las 6 pantallas del 
 
 | Documento | Descripción |
 |---|---|
-| [`sprint1_documentacion.docx`](./sprint1_documentacion.docx) | Información general, Look & Feel y Requerimientos Funcionales |
-| [`wireframe_simplificado.docx`](./wireframe_simplificado.docx) | Transferencia de conocimiento sobre wireframe, stack técnico y modelo de datos |
-| [`marca_viviana.docx`](./marca_viviana.docx) | Manual de marca e identidad visual |
+| [`sprint1_documentacion.docx`](./sprint1_documentacion.docx.pdf) | Información general, Look & Feel y Requerimientos Funcionales |
+| [`wireframe_simplificado.docx`](./wireframe_simplificado.docx.pdf) | Transferencia de conocimiento sobre wireframe, stack técnico y modelo de datos |
+| [`marca_viviana.docx`](./marca_viviana.docx.pdf) | Manual de marca e identidad visual |
 | [`diagrama_arquitectura.png`](./diagrama_arquitectura.png) | Diagrama de arquitectura del sistema |
 
 ---
@@ -146,7 +146,7 @@ Diseño de alta fidelidad en versión móvil y desktop para las 6 pantallas del 
 | Directorio de Clientas | 6 | Media |
 | Autenticación y Roles | 3 | Alta |
 
-> Ver documento completo en [`sprint1_documentacion.docx`](./sprint1_documentacion.docx) — Sección 3
+> Ver documento completo en [`sprint1_documentacion.docx`](./sprint1_documentacion.docx.pdf) — Sección 3
 
 ---
 
