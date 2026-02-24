@@ -31,7 +31,7 @@
 ## 3. Componentes UX/UI
 
 ### 🔗 Diseño en Figma
-> [Insertar link al archivo de Figma aquí]
+> https://www.figma.com/design/6GRxMzT1H4Dwjju0mw8vFR/Programaci%C3%B3nWeb?node-id=332-205&t=Gu2nfDKfKT2qASLv-1
 
 ### Wireframes de Baja Fidelidad
 6 pantallas documentadas que cubren el flujo completo de la aplicación:
@@ -44,6 +44,9 @@
 6. Directorio de Clientas
 
 > Ver wireframes en Figma o consultar [`wireframe_simplificado.docx`](./wireframe_simplificado.docx)
+> ![WF1](https://github.com/user-attachments/assets/b250ee71-565c-4fe2-8079-8b70df14cc1b)
+<img width="1485" height="1066" alt="WJ2" src="https://github.com/user-attachments/assets/496f922e-1149-4f90-b191-1b7d1be570cb" />
+
 
 ### Marca e Identidad Visual
 
@@ -77,8 +80,9 @@ Componentes UI validados: botones, formularios, tarjetas, iconografía y estados
 Diseño de alta fidelidad en versión móvil y desktop para las 6 pantallas del MVP.
 
 > Ver mockups en Figma — [Insertar link aquí]
+<img width="2306" height="995" alt="MOVIL" src="https://github.com/user-attachments/assets/7f748871-d7c1-49a4-ab81-d20a1e497c76" />
+![DESK](https://github.com/user-attachments/assets/5bd767b5-b7c7-45d9-b8ba-f6eaf70b41a9)
 
----
 
 ## 4. Componentes Técnicos
 
@@ -106,11 +110,11 @@ Diseño de alta fidelidad en versión móvil y desktop para las 6 pantallas del 
 
 | Colección | Campos principales |
 |---|---|
-| `citas` | id, clientaId, servicioId, fechaHora, duracion, estado, montoAnticipo, anticipoPagado, notas, creadaEn |
-| `clientas` | id, nombre, telefono, alergias, preferencias, notas, creadaEn |
-| `servicios` | id, nombre, descripcion, precio, duracionMin, fotoUrl, activo, proximamente, esCombo, serviciosIncluidos |
-| `horariosBlockeados` | id, fechaHora, duracionMin, motivo |
-| `usuarios` | id, nombre, rol (ADMIN / COLABORADORA), email |
+| `citas` | idCita, clientaId, servicioId, fechaHora, duracion, estado, montoAnticipo, anticipoPagado, notas, creadaEn |
+| `clientas` | idClienta, nombre, telefono, alergias, preferencias, notas, creadaEn |
+| `servicios` | idServicio, nombre, descripcion, precio, duracionMin, fotoUrl, activo, proximamente, esCombo, serviciosIncluidos |
+| `horariosBlockeados` | idHorario, fechaHora, duracionMin, motivo |
+| `usuarios` | idUsuario, nombre, rol (ADMIN / COLABORADORA), email |
 
 ---
 
