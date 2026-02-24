@@ -43,7 +43,7 @@
 5. Detalle de Cita
 6. Directorio de Clientas
 
-> Ver wireframes en Figma o consultar [`wireframe_simplificado.docx`](./wireframe_simplificado.docx)
+> Ver wireframes en Figma o consultar [`wireframe_simplificado.docx`](./wireframe_simplificado.docx.pdf)
 > ![WF1](https://github.com/user-attachments/assets/b250ee71-565c-4fe2-8079-8b70df14cc1b)
 <img width="1485" height="1066" alt="WJ2" src="https://github.com/user-attachments/assets/496f922e-1149-4f90-b191-1b7d1be570cb" />
 
