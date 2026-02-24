@@ -70,18 +70,24 @@
 
 ### Style Tiles
 Componentes UI validados: botones, formularios, tarjetas, iconografía y estados visuales (hover, activo, deshabilitado, error).
+<img width="1900" height="932" alt="Captura de pantalla 2026-02-23 234427" src="https://github.com/user-attachments/assets/73026594-09d6-4dab-bfb5-fc98fa6b165c" />
+<img width="1910" height="836" alt="Captura de pantalla 2026-02-23 234438" src="https://github.com/user-attachments/assets/47b84433-89a2-45f9-9040-cb8b9707b51d" />
+<img width="1916" height="742" alt="Captura de pantalla 2026-02-23 234447" src="https://github.com/user-attachments/assets/a5d88990-10c0-4be0-9e5a-b1426a4c5ce5" />
+<img width="1918" height="921" alt="Captura de pantalla 2026-02-23 234503" src="https://github.com/user-attachments/assets/4d0563cf-f955-4354-83ef-295071000130" />
+<img width="1911" height="696" alt="Captura de pantalla 2026-02-23 234522" src="https://github.com/user-attachments/assets/b1d11e6c-6803-472c-9d28-e11a3f00495c" />
 
-> Ver [`style_tiles_viviana.html`](./style_tiles_viviana.html)
+
 
 ### Moodboard
-> [Insertar imagen o link al moodboard aquí]
+<img width="1410" height="959" alt="ProgramaciónWeb" src="https://github.com/user-attachments/assets/48284f0f-4ddc-4da8-9b6b-0f89552e5ee2" />
+
 
 ### Mockups
 Diseño de alta fidelidad en versión móvil y desktop para las 6 pantallas del MVP.
 
-> Ver mockups en Figma — [Insertar link aquí]
+> Ver mockups en Figma — (https://www.figma.com/design/6GRxMzT1H4Dwjju0mw8vFR/Programaci%C3%B3nWeb?node-id=337-2&t=6dWFqC8jFz6VwX8y-1)
 <img width="2306" height="995" alt="MOVIL" src="https://github.com/user-attachments/assets/7f748871-d7c1-49a4-ab81-d20a1e497c76" />
-![DESK](https://github.com/user-attachments/assets/5bd767b5-b7c7-45d9-b8ba-f6eaf70b41a9)
+![DESK](https://github.com/user-attachments/assets/07d93819-acbb-4cc4-bf58-533972e09bb3)
 
 
 ## 4. Componentes Técnicos
@@ -104,7 +110,8 @@ Diseño de alta fidelidad en versión móvil y desktop para las 6 pantallas del 
 
 ### Diagrama de Base de Datos
 
-> [Insertar imagen del diagrama de base de datos aquí]
+> ![diagrama_base_datos](https://github.com/user-attachments/assets/8192469c-6c44-4500-bd61-5292a9d30a03)
+
 
 **Colecciones en Firestore**
 
