@@ -21,10 +21,10 @@
 
 | Integrante | Rol |
 |---|---|
-| Gabriel | Líder de equipo |
-| Miguel | Desarrollador |
-| José Luis | Desarrollador |
-| Rocío | Desarrolladora |
+| Jeús Gabriel González Espinoza | Líder de equipo |
+| Miguel Núñez Peña | Desarrollador |
+| José Luis Martinez Rojas | Desarrollador |
+| Rocío Vázquez Landaverde | Desarrolladora |
 
 ---
 
