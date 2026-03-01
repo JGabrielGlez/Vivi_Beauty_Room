@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:vivi_room/features/agenda/screens/agenda_screen.dart';
 
 void main() {
   runApp(
     MaterialApp(
-      home: AboutDialog(), //aquí prueban su widget
+      home: AgendaScreen(), //aquí prueban su widget
     ),
   );
 }
