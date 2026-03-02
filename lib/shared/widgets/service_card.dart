@@ -44,32 +44,69 @@ class ServiceCard extends StatelessWidget {
           _Foto(proximamente: servicio.proximamente),
           Padding(
             padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Nombre del servicio
-                Text(servicio.nombre, style: AppTextStyles.subtitulo),
-
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Text(
-                      '\$${servicio.precio.toStringAsFixed(0)}',
-                      style: AppTextStyles.precio,
+            child: SizedBox(
+              height:
+                  135, // Altura fija para mantener botones en misma posición
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Nombre del servicio con altura limitada
+                  SizedBox(
+                    height: 48,
+                    child: Text(
+                      servicio.nombre,
+                      style: AppTextStyles.subtitulo,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
+                  ),
 
-                    const Spacer(),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Text(
+                        '\$${servicio.precio.toStringAsFixed(0)}',
+                        style: AppTextStyles.precio,
+                      ),
 
-                    Text(
-                      '${servicio.duracionMin} min',
-                      style: AppTextStyles.textoSecundario,
+                      const Spacer(),
+
+                      Text(
+                        '${servicio.duracionMin} min',
+                        style: AppTextStyles.textoSecundario,
+                      ),
+                    ],
+                  ),
+
+                  const Spacer(), // Empuja los botones al final
+                  // Badge de próximamente o botones de acción
+                  if (servicio.proximamente)
+                    const _BadgeProximamente()
+                  else
+                    Row(
+                      children: [
+                        // Botón de agendar
+                        Expanded(child: _BotonAgendar(onTap: onAgendar)),
+
+                        // Botón de editar (solo si se proporciona el callback)
+                        if (onEditar != null) ...[
+                          const SizedBox(width: 8),
+                          IconButton(
+                            onPressed: onEditar,
+                            icon: const Icon(Icons.edit_outlined),
+                            color: AppColors.rosa,
+                            style: IconButton.styleFrom(
+                              side: BorderSide(color: AppColors.rosa, width: 1),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                    const SizedBox(height: 12),
-
-                    // botones
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
