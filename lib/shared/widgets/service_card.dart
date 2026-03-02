@@ -102,7 +102,6 @@ class _Foto extends StatelessWidget {
 }
 
 class _BadgeProximamente extends StatelessWidget {
-
   const _BadgeProximamente();
   @override
   Widget build(BuildContext context) {
