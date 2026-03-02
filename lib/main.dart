@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:vivi_room/features/servicios/screens/catalogo_screen.dart';
+import 'package:vivi_room/features/agenda/screens/detalle_cita_screen.dart';
 
 void main() {
   runApp(
     MaterialApp(
-      home: CatalogoScreen(), //aquí prueban su widget
+      home: DetalleCitaScreen(), //aquí prueban su widget
     ),
   );
 }
