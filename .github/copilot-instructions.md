@@ -274,3 +274,7 @@ assets/
 | Disponibilidad | Funcionar con conectividad intermitente. Datos de sesión activa disponibles offline |
 | Seguridad      | Reglas de Firestore deben impedir acceso sin autenticación válida                   |
 | Escalabilidad  | Arquitectura debe soportar módulos futuros sin rediseño del sistema base            |
+
+## Instrucciones adicionales a seguir
+
+Tienes más instrucciones dentro de la carpeta .github/instructions, por lo que son las fuentes que debes de tener en cuenta siempre y seguirlas estrictamente.
