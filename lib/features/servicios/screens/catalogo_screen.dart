@@ -46,9 +46,7 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
           _categoriaActiva,
         );
 
-        if (query.isEmpty) {
-          return coincideCategoria;
-        }
+        if (query.isEmpty) return coincideCategoria;
 
         final coincideTexto =
             servicio.nombre.toLowerCase().contains(query) ||
@@ -63,14 +61,12 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.blancoRoto,
-
-      // boton flotante + en esq inf derecha
       floatingActionButton: FabButton(onPressed: () => print('Nueva Cita')),
-
-      bottomNavigationBar:
-          AppBottomNavBar
-          // TODO: falta agregar el método a onTap
-          (currentIndex: 1, onTap: (index) {}),
+      bottomNavigationBar: AppBottomNavBar(
+        // TODO: falta agregar el método a onTap
+        currentIndex: 1,
+        onTap: (index) {},
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
@@ -95,14 +91,9 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
               ),
               const SizedBox(height: 12),
               Expanded(
-                child: GridView.builder(
+                child: ListView.separated(
                   itemCount: _serviciosFiltrados.length,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: .7,
-                  ),
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
                     final servicio = _serviciosFiltrados[index];
 
@@ -110,12 +101,8 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
                       servicio: servicio,
                       onAgendar: servicio.proximamente
                           ? null
-                          : () {
-                              print('Agendar: ${servicio.nombre}');
-                            },
-                      onEditar: () {
-                        print('Editar: ${servicio.nombre}');
-                      },
+                          : () => print('Agendar: ${servicio.nombre}'),
+                      onEditar: () => print('Editar: ${servicio.nombre}'),
                     );
                   },
                 ),
