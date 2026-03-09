@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:vivi_room/core/theme/app_colors.dart';
+import 'package:vivi_room/core/theme/app_theme.dart';
 
 class AppBottomNavBar extends StatefulWidget {
   final ValueChanged<int> onTap;
@@ -12,8 +14,8 @@ class AppBottomNavBar extends StatefulWidget {
 
 class _AppBottomNavBarState extends State<AppBottomNavBar> {
   int currentIndex = 0;
-  static const Color activeColor = Color(0xFFD4748F);
-  static const Color inactiveColor = Color(0xFFB0B7C3);
+  static const Color activeColor = AppColors.rosa;
+  static const Color inactiveColor = AppColors.grisClaro;
   static const double iconSize = 24;
   @override
   Widget build(BuildContext context) {

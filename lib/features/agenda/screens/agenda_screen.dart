@@ -6,6 +6,8 @@ import 'package:vivi_room/shared/widgets/primary_button.dart';
 import 'package:vivi_room/shared/widgets/status_badge.dart';
 import '../../../shared/widgets/fab_button.dart';
 import '../../../shared/widgets/search_bar_widget.dart';
+import '../screens/detalle_cita_screen.dart';
+import '../../citas/widgets/nueva_cita_modal.dart';
 import 'dart:developer' as _logger;
 
 class AgendaScreen extends StatefulWidget {
@@ -93,19 +95,12 @@ class _AgendaScreenState extends State<AgendaScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       floatingActionButton: FabButton(
-        onPressed: () async {
-          final newAppointment =
-              await showModalBottomSheet<Map<String, dynamic>>(
-                context: context,
-                isScrollControlled: true,
-                backgroundColor: Colors.transparent,
-                builder: (context) => _AppointmentSheet(),
-              );
-          if (newAppointment != null) {
-            setState(() {
-              // Aquí puedes agregar la cita a la lista si lo deseas
-            });
-          }
+        onPressed: () => {
+          showModalBottomSheet(
+            isScrollControlled: true,
+            context: context,
+            builder: (context) => const NuevaCitaModal(),
+          ),
         },
       ),
       body: SafeArea(
@@ -450,6 +445,7 @@ class _AppointmentSheetState extends State<_AppointmentSheet> {
     }
   }
 
+  // Creo este es el modal
   @override
   Widget build(BuildContext context) {
     return DraggableScrollableSheet(
@@ -457,177 +453,7 @@ class _AppointmentSheetState extends State<_AppointmentSheet> {
       minChildSize: 0.5,
       maxChildSize: 0.95,
       builder: (context, scrollController) {
-        return Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-            boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 16)],
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          child: SingleChildScrollView(
-            controller: scrollController,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Nueva Cita',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'SELECCIONAR CLIENTE',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                    color: Color(0xFFB0B7C3),
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                SearchBarWidget(
-                  hintText: 'Buscar por nombre...',
-                  controller: nombreController,
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  'Tipo de servicio',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    _serviceChip(
-                      'Pedicura',
-                      servicio == 'Pedicura',
-                      Icons.spa,
-                      () {
-                        setState(() => servicio = 'Pedicura');
-                      },
-                    ),
-                    const SizedBox(width: 12),
-                    _serviceChip(
-                      'Peinado',
-                      servicio == 'Peinado',
-                      Icons.cut,
-                      () {
-                        setState(() => servicio = 'Peinado');
-                      },
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _dateField('Fecha', fecha, () async {
-                        final picked = await showDatePicker(
-                          context: context,
-                          initialDate: fecha,
-                          firstDate: DateTime.now().subtract(
-                            const Duration(days: 365),
-                          ),
-                          lastDate: DateTime.now().add(
-                            const Duration(days: 365),
-                          ),
-                        );
-                        if (picked != null) setState(() => fecha = picked);
-                      }),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _timeField('Horario', horario, () async {
-                        final picked = await showTimePicker(
-                          context: context,
-                          initialTime: horario,
-                        );
-                        if (picked != null) setState(() => horario = picked);
-                      }),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  'Duración',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    for (var d in [30, 45, 60, 90])
-                      _durationChip(
-                        d,
-                        duracion == d,
-                        () => setState(() => duracion = d),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: AppTextField(
-                        label: 'Costo total',
-                        controller: costoController,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: AppTextField(
-                        label: 'Anticipo',
-                        controller: anticipoController,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 32),
-                SizedBox(
-                  width: double.infinity,
-                  child: PrimaryButton(
-                    text: 'Guardar Cita',
-                    onPressed: () {
-                      Navigator.of(context).pop({
-                        'nombre': nombreController.text,
-                        'servicio': servicio,
-                        'duracion': duracion,
-                        'costo': double.tryParse(costoController.text) ?? 0.0,
-                        'anticipo':
-                            double.tryParse(anticipoController.text) ?? 0.0,
-                        'fecha': fecha,
-                        'time':
-                            '${horario.hour.toString().padLeft(2, '0')}:${horario.minute.toString().padLeft(2, '0')}',
-                        'status': 'CONFIRMADA',
-                      });
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
+        return DetalleCitaScreen();
       },
     );
   }

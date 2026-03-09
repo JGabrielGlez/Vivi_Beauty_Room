@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:vivi_room/features/citas/widgets/nueva_cita_modal.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../shared/models/servicio.dart';
-import '../../../shared/widgets/app_bottom_nav_bar.dart';
 import '../../../shared/widgets/filter_chip_row.dart';
 import '../../../shared/widgets/search_bar_widget.dart';
 import '../../../shared/widgets/section_title.dart';
@@ -97,8 +97,18 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
                       servicio: servicio,
                       onAgendar: servicio.proximamente
                           ? null
-                          : () => print('Agendar: ${servicio.nombre}'),
-                      onEditar: () => print('Editar: ${servicio.nombre}'),
+                          : () => showModalBottomSheet(
+                              isScrollControlled: true,
+                              context: context,
+                              builder: (context) => const NuevaCitaModal(),
+                            ),
+                      onEditar: () => showModalBottomSheet(
+                        isScrollControlled: true,
+                        context: context,
+                        // TODO: ponerle como parámetro que será editar cita, no nueva cita
+                        // Pero se reutilizará el diseño completo
+                        builder: (context) => const NuevaCitaModal(),
+                      ),
                     );
                   },
                 ),
