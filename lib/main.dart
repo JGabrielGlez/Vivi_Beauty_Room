@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:vivi_room/features/agenda/screens/detalle_cita_screen.dart';
+import 'app.dart';
 
 void main() {
-  runApp(
-    MaterialApp(
-      home: DetalleCitaScreenz(), //aquí prueban su widget
-    ),
-  );
+  runApp(const App());
 }

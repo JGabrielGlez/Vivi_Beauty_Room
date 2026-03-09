@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import '../../../core/router/app_router.dart';
 
 // Pantalla de login - Rocío
 // Widgets de texto y botón son temporales, se reemplazarán por los de José Luis
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
-  
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -117,7 +118,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 // Botón principal para iniciar sesión
                 _PrimaryButton(
                   label: 'Iniciar sesión',
-                  onPressed: () {},
+                  onPressed: () {
+                    
+                    context.goNamed('agenda');
+                  },
                 ),
 
                 const SizedBox(height: 20),
@@ -128,10 +132,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     const Text(
                       '¿No tienes una cuenta? ',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF888888),
-                      ),
+                      style: TextStyle(fontSize: 12, color: Color(0xFF888888)),
                     ),
                     GestureDetector(
                       onTap: () {},
@@ -193,16 +194,10 @@ class _AppTextField extends StatelessWidget {
         TextField(
           controller: controller,
           obscureText: obscureText,
-          style: const TextStyle(
-            fontSize: 14,
-            color: Color(0xFF1A1A1A),
-          ),
+          style: const TextStyle(fontSize: 14, color: Color(0xFF1A1A1A)),
           decoration: InputDecoration(
             hintText: placeholder,
-            hintStyle: const TextStyle(
-              fontSize: 14,
-              color: Color(0xFF888888),
-            ),
+            hintStyle: const TextStyle(fontSize: 14, color: Color(0xFF888888)),
             suffixIcon: suffixIcon,
             filled: true,
             fillColor: Colors.white,
@@ -241,10 +236,7 @@ class _AppTextField extends StatelessWidget {
 
 // Botón rosado principal
 class _PrimaryButton extends StatelessWidget {
-  const _PrimaryButton({
-    required this.label,
-    required this.onPressed,
-  });
+  const _PrimaryButton({required this.label, required this.onPressed});
 
   final String label;
   final VoidCallback onPressed;
@@ -266,12 +258,9 @@ class _PrimaryButton extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 15,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
         ),
       ),
     );
   }
-} 
+}
