@@ -39,8 +39,8 @@ class _AgendaScreenState extends State<AgendaScreen> {
     {
       'time': '13:00',
       'nombre': 'Viviana Landaverde',
-      'servicio': '',
-      'duracion': '',
+      'servicio': 'Uñas',
+      'duracion': 60,
       'status': 'CONFIRMADA',
     },
   ];
