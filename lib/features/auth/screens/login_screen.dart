@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 // Widgets de texto y botón son temporales, se reemplazarán por los de José Luis
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
+  
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
