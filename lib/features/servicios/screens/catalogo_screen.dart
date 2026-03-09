@@ -63,8 +63,7 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
       backgroundColor: AppColors.blancoRoto,
       floatingActionButton: FabButton(onPressed: () => print('Nueva Cita')),
       bottomNavigationBar: AppBottomNavBar(
-        // TODO: falta agregar el método a onTap
-        currentIndex: 1,
+        // TODO: falta agregar el método a onTap que es la navegacion
         onTap: (index) {},
       ),
       body: SafeArea(

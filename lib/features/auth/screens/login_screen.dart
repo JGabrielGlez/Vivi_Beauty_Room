@@ -119,8 +119,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 _PrimaryButton(
                   label: 'Iniciar sesión',
                   onPressed: () {
-                    
-                    context.goNamed('agenda');
+                    context.goNamed('home');
                   },
                 ),
 

@@ -26,9 +26,7 @@ class _DirectorioScreenState extends State<DirectorioScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFFAF8F8),
       // Botón flotante para agregar una nueva clienta
-      floatingActionButton: FabButton(
-        onPressed: () {},
-      ),
+      floatingActionButton: FabButton(onPressed: () {}),
       body: Column(
         children: [
           // Encabezado rosado con el título de la pantalla
@@ -80,17 +78,32 @@ class _DirectorioScreenState extends State<DirectorioScreen> {
                           // Clientas vistas recientemente
                           const _SectionLabel('RECIENTES'),
                           const SizedBox(height: 8),
-                          const _ClienteRow(nombre: 'Sofía Ramírez', info: '14 ene · Pestañas clásicas'),
-                          const _ClienteRow(nombre: 'Mariana Lopez', info: '2 feb · Maquillaje social'),
+                          const _ClienteRow(
+                            nombre: 'Sofía Ramírez',
+                            info: '14 ene · Pestañas clásicas',
+                          ),
+                          const _ClienteRow(
+                            nombre: 'Mariana Lopez',
+                            info: '2 feb · Maquillaje social',
+                          ),
 
                           const SizedBox(height: 16),
 
                           // Todas las clientas registradas
                           const _SectionLabel('TODAS'),
                           const SizedBox(height: 8),
-                          const _ClienteRow(nombre: 'Daniela Morales', info: '8 ene · Laminado de cejas'),
-                          const _ClienteRow(nombre: 'Janeth Lopez', info: '2 feb · Maquillaje social'),
-                          const _ClienteRow(nombre: 'Sofía Ramírez', info: '14 ene · Pestañas clásicas'),
+                          const _ClienteRow(
+                            nombre: 'Daniela Morales',
+                            info: '8 ene · Laminado de cejas',
+                          ),
+                          const _ClienteRow(
+                            nombre: 'Janeth Lopez',
+                            info: '2 feb · Maquillaje social',
+                          ),
+                          const _ClienteRow(
+                            nombre: 'Sofía Ramírez',
+                            info: '14 ene · Pestañas clásicas',
+                          ),
 
                           const SizedBox(height: 16),
                         ],
@@ -104,7 +117,7 @@ class _DirectorioScreenState extends State<DirectorioScreen> {
 
           // Barra de navegación inferior
           AppBottomNavBar(
-            currentIndex: 1,
+            // TODO:  agregarle la navegacion
             onTap: (index) {},
           ),
         ],

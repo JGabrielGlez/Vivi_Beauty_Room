@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
-class AppBottomNavBar extends StatelessWidget {
-  final int currentIndex;
+class AppBottomNavBar extends StatefulWidget {
   final ValueChanged<int> onTap;
 
-  const AppBottomNavBar({
-    Key? key,
-    required this.currentIndex,
-    required this.onTap,
-  }) : super(key: key);
+  AppBottomNavBar({Key? key, required this.onTap}) : super(key: key);
 
+  @override
+  State<StatefulWidget> createState() => _AppBottomNavBarState();
+}
+
+class _AppBottomNavBarState extends State<AppBottomNavBar> {
+  int currentIndex = 0;
   static const Color activeColor = Color(0xFFD4748F);
   static const Color inactiveColor = Color(0xFFB0B7C3);
   static const double iconSize = 24;
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -33,7 +33,12 @@ class AppBottomNavBar extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         currentIndex: currentIndex,
-        onTap: onTap,
+        onTap: (index) => {
+          setState(() {
+            currentIndex = index;
+            widget.onTap(index);
+          }),
+        },
         selectedItemColor: activeColor,
         unselectedItemColor: inactiveColor,
         selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
