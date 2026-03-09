@@ -73,7 +73,7 @@ class ServiceCard extends StatelessWidget {
                   else
                     Row(
                       children: [
-                        Expanded(child: _BotonAgendar(onTap: onAgendar)),
+                        Flexible(child: _BotonAgendar(onTap: onAgendar)),
                         if (onEditar != null) ...[
                           const SizedBox(width: 8),
                           IconButton(

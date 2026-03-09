@@ -92,7 +92,6 @@ class _AgendaScreenState extends State<AgendaScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      bottomNavigationBar: AppBottomNavBar(onTap: (i) {}),
       floatingActionButton: FabButton(
         onPressed: () async {
           final newAppointment =

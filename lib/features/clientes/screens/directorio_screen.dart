@@ -115,11 +115,7 @@ class _DirectorioScreenState extends State<DirectorioScreen> {
             ),
           ),
 
-          // Barra de navegación inferior
-          AppBottomNavBar(
-            // TODO:  agregarle la navegacion
-            onTap: (index) {},
-          ),
+        
         ],
       ),
     );

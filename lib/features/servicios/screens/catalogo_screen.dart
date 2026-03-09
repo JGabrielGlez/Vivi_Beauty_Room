@@ -62,10 +62,7 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
     return Scaffold(
       backgroundColor: AppColors.blancoRoto,
       floatingActionButton: FabButton(onPressed: () => print('Nueva Cita')),
-      bottomNavigationBar: AppBottomNavBar(
-        // TODO: falta agregar el método a onTap que es la navegacion
-        onTap: (index) {},
-      ),
+
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
