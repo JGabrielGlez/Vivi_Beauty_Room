@@ -170,4 +170,102 @@ Diseño de alta fidelidad en versión móvil y desktop para las 6 pantallas del 
 
 ---
 
+## 8. Avances del Proyecto — Sprint 2
+
+### Arquitectura Flutter Implementada
+
+Se estableció la estructura completa de la aplicación siguiendo las mejores prácticas de Flutter:
+
+- **Organización de carpetas:**
+  - `lib/core/` - Módulos centrales (router, theme)
+  - `lib/features/` - Funcionalidades por dominio (auth, agenda, citas, servicios, clientes)
+  - `lib/shared/` - Componentes y modelos reutilizables
+
+- **Sistema de navegación:**
+  - Implementación de Go Router para navegación declarativa
+  - Configuración de rutas principales con deep links preparados
+
+- **Gestión de estado:**
+  - Arquitectura preparada para Riverpod (a implementar en próximos sprints)
+
+### Componentes Reutilizables Desarrollados
+
+Se crearon todos los componentes UI compartidos en `lib/shared/widgets/` siguiendo la identidad visual definida:
+
+| Componente | Archivo | Descripción |
+| ---------- | ------- | ----------- |
+| `PrimaryButton` | `primary_button.dart` | Botón principal rosa (#D4748F) para CTAs |
+| `SecondaryButton` | `secondary_button.dart` | Botón secundario con borde rosa |
+| `AppBottomNavBar` | `app_bottom_nav_bar.dart` | Navegación inferior con 4 tabs (Agenda, Servicios, Clientes, Más) |
+| `StatusBadge` | `status_badge.dart` | Badges de colores para estados de citas |
+| `ClienteAvatar` | `cliente_avatar.dart` | Avatar circular con iniciales y fondo rosa claro |
+| `SearchBarWidget` | `search_bar_widget.dart` | Barra de búsqueda con ícono de lupa |
+| `FABButton` | `fab_button.dart` | Botón flotante '+' para nueva cita |
+| `AppTextField` | `app_text_field.dart` | Campo de texto con validación y estilo consistente |
+
+### Sistema de Temas
+
+- **AppColors:** Paleta completa implementada en código Dart
+- **AppTextStyles:** Estilos tipográficos con Playfair Display y Poppins
+- **AppTheme:** Tema Material Design unificado
+
+### Modelos de Datos
+
+Implementación de modelos Dart para la estructura de datos:
+
+- **Cita:** Modelo completo con estados (PENDIENTE, CONFIRMADA, CANCELADA, etc.)
+- **Cliente:** Información de contacto, alergias y preferencias
+- **Servicio:** Catálogo con precios, duración y combos
+
+---
+
+## 9. Avances del Proyecto — Sprint 3
+
+### Pantallas Principales Implementadas
+
+Se desarrollaron todas las pantallas del MVP con navegación completa:
+
+- **Login Screen:** Autenticación con campos email/password y logo de marca
+- **Agenda Screen:** Vista diaria/semanal de citas con tarjetas interactivas
+- **Catálogo Screen:** Grid de servicios con filtros por categoría (Pestañas, Cejas, Maquillaje, Combos)
+- **Directorio Screen:** Lista de clientas con búsqueda y avatar
+- **Nueva Cita Modal:** Modal integrado en agenda para crear citas
+
+### Integración de Features
+
+- Merge exitoso de ramas de desarrollo (login, directorio, catálogo, nueva-cita)
+- Navegación fluida entre todas las pantallas
+- Aplicación de componentes compartidos en todas las interfaces
+
+### Mejoras Técnicas
+
+- Corrección de errores de navegación y tipos de datos
+- Optimización de modales y comportamientos UI
+- Preparación para integración con Firebase
+
+### Estado Actual
+
+La aplicación cuenta con:
+- ✅ UI/UX consistente y profesional
+- ✅ Navegación completa entre módulos
+- ✅ Componentes reutilizables aplicados
+- ✅ Arquitectura escalable preparada
+- ✅ Modelos de datos estructurados
+
+### Próximos Pasos (Sprint 4+)
+
+- Integración completa con Firebase (Auth, Firestore, Storage)
+- Implementación de reglas de negocio en Cloud Functions
+- Validaciones de disponibilidad y anticipos
+- Notificaciones push
+- Dashboard con métricas financieras
+
+---
+
+## 10. Pruebas de Usuario
+
+Para ver las pruebas de usuario realizadas durante el desarrollo, consulta el siguiente video: [https://youtu.be/yVC9rUf2TrI](https://youtu.be/yVC9rUf2TrI)
+
+---
+
 _Taller de Full Stack · 2026_
