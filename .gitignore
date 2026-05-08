@@ -1,4 +1,7 @@
 # Miscellaneous
+.claude/
+.claude
+node_modules/
 *.class
 *.log
 *.pyc
@@ -39,7 +42,15 @@ app.*.symbols
 # Obfuscation related
 app.*.map.json
 
+#Instrucciones de lo que se debe de hacer para el backend
+backend_viviana.md
 # Android Studio will place build artifacts here
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Base de datos local
+database.db
+
+# Variables de entorno
+.env
