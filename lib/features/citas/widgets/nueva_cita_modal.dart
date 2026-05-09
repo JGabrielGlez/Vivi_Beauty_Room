@@ -34,6 +34,9 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
   // Mensaje de error si la petición falla
   String? _errorServicios;
 
+  // Fecha seleccionada en el date picker (inicia en hoy)
+  DateTime _fechaSeleccionada = DateTime.now();
+
   // Búsqueda de clientas
   final TextEditingController _busquedaController = TextEditingController();
   List<Clienta> _resultadosBusqueda = [];
@@ -292,7 +295,7 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
                     children: [
                       _buildLabel('FECHA'),
                       const SizedBox(height: 8),
-                      const AppTextField(label: '25 Feb 2026'),
+                      _buildFechaPicker(),
                     ],
                   ),
                 ),
@@ -433,6 +436,66 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
           (a - duracionMin).abs() < (b - duracionMin).abs() ? a : b,
     );
     duracionSeleccionada = '$cercano MIN';
+  }
+
+  // Campo de fecha que abre el date picker nativo de Flutter al tocarlo
+  Widget _buildFechaPicker() {
+    final texto =
+        '${_fechaSeleccionada.day.toString().padLeft(2, '0')} '
+        '${_mesCorto(_fechaSeleccionada.month)} '
+        '${_fechaSeleccionada.year}';
+
+    return GestureDetector(
+      onTap: () async {
+        final picked = await showDatePicker(
+          context: context,
+          initialDate: _fechaSeleccionada,
+          firstDate: DateTime.now(),
+          lastDate: DateTime.now().add(const Duration(days: 365)),
+          builder: (context, child) => Theme(
+            data: Theme.of(context).copyWith(
+              colorScheme: const ColorScheme.light(
+                primary: Color(0xFFD4748F),
+                onPrimary: Colors.white,
+                surface: Colors.white,
+              ),
+            ),
+            child: child!,
+          ),
+        );
+        if (picked != null) {
+          setState(() => _fechaSeleccionada = picked);
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFCCCCCC), width: 1.5),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.calendar_today_outlined,
+                size: 18, color: Color(0xFFD4748F)),
+            const SizedBox(width: 10),
+            Text(
+              texto,
+              style: const TextStyle(fontSize: 14, color: Color(0xFF1A1A1A)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Devuelve el nombre corto del mes en español
+  String _mesCorto(int mes) {
+    const meses = [
+      '', 'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+      'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
+    ];
+    return meses[mes];
   }
 
   // Muestra la clienta seleccionada con un botón para cambiarla
