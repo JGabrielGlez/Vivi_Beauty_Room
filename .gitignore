@@ -44,6 +44,7 @@ app.*.map.json
 
 #Instrucciones de lo que se debe de hacer para el backend
 backend_viviana.md
+tickets/
 # Android Studio will place build artifacts here
 /android/app/debug
 /android/app/profile
