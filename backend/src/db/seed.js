@@ -181,4 +181,112 @@ function seedServicios() {
   }
 }
 
-module.exports = { seedUsuarios, seedClientas, seedServicios };
+function seedCitasAgenda() {
+  const existe = db.prepare("SELECT * FROM citas WHERE fechaHora LIKE '2025-05%' LIMIT 1").get();
+
+  if (!existe) {
+    const clientas = db.prepare('SELECT idClienta FROM clientas').all();
+    const servicios = db.prepare('SELECT idServicio, duracionMin FROM servicios').all();
+
+    if (clientas.length === 0 || servicios.length === 0) {
+      console.log('Faltan clientas o servicios para seed de citas agenda');
+      return;
+    }
+
+    const citas = [
+      {
+        idClienta: clientas[0].idClienta,
+        idServicio: servicios[0].idServicio,
+        fechaHora: '2025-05-09T09:00:00',
+        duracion: servicios[0].duracionMin + 30,
+        estado: 'CONFIRMADA',
+        montoAnticipo: 100,
+        anticipoPagado: 1,
+        notas: null
+      },
+      {
+        idClienta: clientas[1].idClienta,
+        idServicio: servicios[1].idServicio,
+        fechaHora: '2025-05-09T11:00:00',
+        duracion: servicios[1].duracionMin + 30,
+        estado: 'PENDIENTE',
+        montoAnticipo: 50,
+        anticipoPagado: 0,
+        notas: 'Primera vez'
+      },
+      {
+        idClienta: clientas[2].idClienta,
+        idServicio: servicios[2].idServicio,
+        fechaHora: '2025-05-09T13:00:00',
+        duracion: servicios[2].duracionMin + 30,
+        estado: 'CONFIRMADA',
+        montoAnticipo: 50,
+        anticipoPagado: 1,
+        notas: null
+      },
+      {
+        idClienta: clientas[3].idClienta,
+        idServicio: servicios[3].idServicio,
+        fechaHora: '2025-05-10T10:00:00',
+        duracion: servicios[3].duracionMin + 30,
+        estado: 'PENDIENTE',
+        montoAnticipo: 50,
+        anticipoPagado: 0,
+        notas: null
+      },
+      {
+        idClienta: clientas[4].idClienta,
+        idServicio: servicios[0].idServicio,
+        fechaHora: '2025-05-10T14:00:00',
+        duracion: servicios[0].duracionMin + 30,
+        estado: 'CONFIRMADA',
+        montoAnticipo: 100,
+        anticipoPagado: 1,
+        notas: 'Alérgica al látex'
+      },
+      {
+        idClienta: clientas[0].idClienta,
+        idServicio: servicios[1].idServicio,
+        fechaHora: '2025-05-12T09:00:00',
+        duracion: servicios[1].duracionMin + 30,
+        estado: 'PENDIENTE',
+        montoAnticipo: 50,
+        anticipoPagado: 0,
+        notas: null
+      },
+      {
+        idClienta: clientas[1].idClienta,
+        idServicio: servicios[2].idServicio,
+        fechaHora: '2025-05-12T11:00:00',
+        duracion: servicios[2].duracionMin + 30,
+        estado: 'CANCELADA',
+        montoAnticipo: 50,
+        anticipoPagado: 1,
+        notas: 'Canceló por enfermedad'
+      },
+      {
+        idClienta: clientas[2].idClienta,
+        idServicio: servicios[3].idServicio,
+        fechaHora: '2025-05-13T16:00:00',
+        duracion: servicios[3].duracionMin + 30,
+        estado: 'REPROGRAMADA',
+        montoAnticipo: 50,
+        anticipoPagado: 1,
+        notas: 'Reprogramada por viaje'
+      }
+    ];
+
+    const stmt = db.prepare(`
+      INSERT INTO citas (idClienta, idServicio, fechaHora, duracion, estado, montoAnticipo, anticipoPagado, notas)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    for (const c of citas) {
+      stmt.run(c.idClienta, c.idServicio, c.fechaHora, c.duracion, c.estado, c.montoAnticipo, c.anticipoPagado, c.notas);
+    }
+
+    console.log('Citas agenda seed creadas');
+  }
+}
+
+module.exports = { seedUsuarios, seedClientas, seedServicios, seedCitasAgenda };
