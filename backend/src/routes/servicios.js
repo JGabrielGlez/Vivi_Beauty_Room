@@ -179,5 +179,24 @@ router.put('/:id', soloAdmin, (req, res) => {
     res.status(500).json({ error: 'Error al actualizar el servicio' });
   }
 });
+// DELETE /api/servicios/:id
+router.delete('/:id', soloAdmin, (req, res) => {
+  try {
+    const servicio = db.prepare(`
+      SELECT * FROM servicios WHERE idServicio = ?
+    `).get(req.params.id);
 
+    if (!servicio) {
+      return res.status(404).json({ error: 'Servicio no encontrado' });
+    }
+
+    db.prepare(`
+      DELETE FROM servicios WHERE idServicio = ?
+    `).run(req.params.id);
+
+    res.json({ mensaje: 'Servicio eliminado correctamente' });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al eliminar el servicio' });
+  }
+});
 module.exports = router;
