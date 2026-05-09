@@ -9,10 +9,10 @@ app.use(express.json());
 
 // Importar DB e inicializar
 const db = require("./src/db/schema");
-const { seedUsuarios, seedClientas } = require("./src/db/seed");
+const { seedUsuarios, seedClientas, seedServicios } = require("./src/db/seed");
 seedClientas();
-seedUsuarios(); // crea usuarios de prueba si no existen
-
+seedUsuarios();
+seedServicios();
 // Middleware de autenticación global (aplica a todas las rutas excepto login)
 const authMiddleware = require("./src/middleware/auth");
 
@@ -23,7 +23,7 @@ app.use("/api/auth", authRoutes);
 // Rutas protegidas (con auth)
 // app.use('/api/agenda',    authMiddleware, require('./src/routes/agenda'));
 // app.use('/api/citas',     authMiddleware, require('./src/routes/citas'));
-// app.use('/api/servicios', authMiddleware, require('./src/routes/servicios'));
+app.use("/api/servicios", authMiddleware, require("./src/routes/servicios"));
 app.use("/api/clientas", authMiddleware, require("./src/routes/clientas"));
 
 const PORT = process.env.PORT || 3000;
