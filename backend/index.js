@@ -22,7 +22,7 @@ app.use('/api/auth', authRoutes);
 // Rutas protegidas (con auth)
 // app.use('/api/agenda',    authMiddleware, require('./src/routes/agenda'));
 // app.use('/api/citas',     authMiddleware, require('./src/routes/citas'));
-// app.use('/api/servicios', authMiddleware, require('./src/routes/servicios'));
+ app.use('/api/servicios', authMiddleware, require('./src/routes/servicios'));
 // app.use('/api/clientas',  authMiddleware, require('./src/routes/clientas'));
 
 const PORT = process.env.PORT || 3000;
