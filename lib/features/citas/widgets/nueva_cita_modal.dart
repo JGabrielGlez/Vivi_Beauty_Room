@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import '../../../shared/models/clienta.dart';
 import '../../../shared/models/servicio.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../../shared/widgets/app_text_field.dart';
@@ -32,10 +34,61 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
   // Mensaje de error si la petición falla
   String? _errorServicios;
 
+  // Búsqueda de clientas
+  final TextEditingController _busquedaController = TextEditingController();
+  List<Clienta> _resultadosBusqueda = [];
+  Clienta? _clientaSeleccionada;
+  bool _buscandoClientas = false;
+  Timer? _debounceTimer;
+
   @override
   void initState() {
     super.initState();
     _cargarServicios();
+  }
+
+  @override
+  void dispose() {
+    _busquedaController.dispose();
+    _debounceTimer?.cancel();
+    super.dispose();
+  }
+
+  // Espera 400ms después de que el usuario deja de escribir antes de buscar
+  void _onBusquedaChanged(String q) {
+    _debounceTimer?.cancel();
+    if (q.isEmpty) {
+      setState(() {
+        _resultadosBusqueda = [];
+        _clientaSeleccionada = null;
+      });
+      return;
+    }
+    _debounceTimer = Timer(
+      const Duration(milliseconds: 400),
+      () => _buscarClientas(q),
+    );
+  }
+
+  // Llama al backend con el texto buscado y muestra los resultados
+  Future<void> _buscarClientas(String q) async {
+    setState(() => _buscandoClientas = true);
+    try {
+      final uri = Uri.parse('$_baseUrl/api/clientas')
+          .replace(queryParameters: {'q': q});
+      final response = await http.get(uri);
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        setState(() {
+          _resultadosBusqueda = data.map((e) => Clienta.fromJson(e)).toList();
+          _buscandoClientas = false;
+        });
+      } else {
+        setState(() => _buscandoClientas = false);
+      }
+    } catch (_) {
+      setState(() => _buscandoClientas = false);
+    }
   }
 
   // Llama al backend y llena la lista de servicios activos
@@ -118,10 +171,110 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
             ),
             const SizedBox(height: 20),
 
-            // Búsqueda de cliente
+            // Búsqueda de cliente con resultados en dropdown
             _buildLabel('SELECCIONAR CLIENTE'),
             const SizedBox(height: 8),
-            const SearchBarWidget(hintText: 'Buscar por nombre...'),
+            // Si ya hay una clienta seleccionada, muestra su nombre con opción a cambiar
+            if (_clientaSeleccionada != null)
+              _buildClientaSeleccionada()
+            else
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SearchBarWidget(
+                    controller: _busquedaController,
+                    hintText: 'Buscar por nombre o teléfono...',
+                    onChanged: _onBusquedaChanged,
+                  ),
+                  // Spinner mientras busca
+                  if (_buscandoClientas)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          color: Color(0xFFD4748F),
+                          strokeWidth: 2,
+                        ),
+                      ),
+                    ),
+                  // Lista de resultados
+                  if (_resultadosBusqueda.isNotEmpty)
+                    Container(
+                      margin: const EdgeInsets.only(top: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFEEEEEE)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.06),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        children: _resultadosBusqueda.map((clienta) {
+                          return InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: () {
+                              setState(() {
+                                _clientaSeleccionada = clienta;
+                                _resultadosBusqueda = [];
+                                _busquedaController.clear();
+                              });
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                              child: Row(
+                                children: [
+                                  // Avatar con inicial del nombre
+                                  CircleAvatar(
+                                    radius: 18,
+                                    backgroundColor: const Color(0xFFD4748F)
+                                        .withValues(alpha: 0.15),
+                                    child: Text(
+                                      clienta.nombre[0].toUpperCase(),
+                                      style: const TextStyle(
+                                        color: Color(0xFFD4748F),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        clienta.nombre,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                      Text(
+                                        clienta.telefono,
+                                        style: TextStyle(
+                                          color: Colors.grey[500],
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                ],
+              ),
             const SizedBox(height: 20),
 
             // Chips de servicios cargados desde la BD
@@ -280,6 +433,58 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
           (a - duracionMin).abs() < (b - duracionMin).abs() ? a : b,
     );
     duracionSeleccionada = '$cercano MIN';
+  }
+
+  // Muestra la clienta seleccionada con un botón para cambiarla
+  Widget _buildClientaSeleccionada() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFD4748F).withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFD4748F).withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: const Color(0xFFD4748F).withValues(alpha: 0.2),
+            child: Text(
+              _clientaSeleccionada!.nombre[0].toUpperCase(),
+              style: const TextStyle(
+                color: Color(0xFFD4748F),
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _clientaSeleccionada!.nombre,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+                Text(
+                  _clientaSeleccionada!.telefono,
+                  style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          // Botón para deseleccionar y volver a buscar
+          GestureDetector(
+            onTap: () => setState(() => _clientaSeleccionada = null),
+            child: const Icon(Icons.close, size: 18, color: Color(0xFFD4748F)),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildLabel(String text) {
