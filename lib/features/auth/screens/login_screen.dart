@@ -44,7 +44,9 @@ class _LoginScreenState extends State<LoginScreen> {
       context.goNamed('home');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(authProvider.errorMessage ?? 'Error al iniciar sesión')),
+        SnackBar(
+          content: Text(authProvider.errorMessage ?? 'Error al iniciar sesión'),
+        ),
       );
     }
   }
@@ -97,26 +99,52 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     const SizedBox(height: 32),
 
-                    // Mostrar errores si existen
-                    if (authProvider.errorMessage != null)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.red.shade50,
-                            border: Border.all(color: Colors.red.shade300),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            authProvider.errorMessage!,
-                            style: TextStyle(
-                              color: Colors.red.shade700,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
+                    // Espacio fijo para errores: evita que el layout se mueva
+                    SizedBox(
+                      height: 56,
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 180),
+                        child: authProvider.errorMessage != null
+                            ? Container(
+                                key: ValueKey(authProvider.errorMessage),
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.shade50,
+                                  border: Border.all(
+                                    color: Colors.red.shade300,
+                                  ),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.error_outline,
+                                      color: Colors.red.shade700,
+                                      size: 18,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        authProvider.errorMessage!,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: Colors.red.shade700,
+                                          fontSize: 13,
+                                          height: 1.2,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : const SizedBox.shrink(key: ValueKey('no_error')),
                       ),
+                    ),
 
                     // Campo de email
                     _AppTextField(
@@ -141,8 +169,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           color: const Color(0xFF888888),
                           size: 20,
                         ),
-                        onPressed: () =>
-                            setState(() => _obscurePassword = !_obscurePassword),
+                        onPressed: () => setState(
+                          () => _obscurePassword = !_obscurePassword,
+                        ),
                       ),
                     ),
 
@@ -168,7 +197,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     // Botón principal para iniciar sesión
                     _PrimaryButton(
-                      label: authProvider.isLoading ? 'Cargando...' : 'Iniciar sesión',
+                      label: authProvider.isLoading
+                          ? 'Cargando...'
+                          : 'Iniciar sesión',
                       onPressed: authProvider.isLoading ? () {} : _handleLogin,
                     ),
 
@@ -180,7 +211,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       children: [
                         const Text(
                           '¿No tienes una cuenta? ',
-                          style: TextStyle(fontSize: 12, color: Color(0xFF888888)),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF888888),
+                          ),
                         ),
                         GestureDetector(
                           onTap: () {},

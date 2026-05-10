@@ -43,7 +43,7 @@ class AuthProvider extends ChangeNotifier {
         // Validar token con backend
         final meResult = await _apiClient.getMe();
         if (meResult['success']) {
-          final usuarioData = meResult['data']['usuario'];
+          final usuarioData = meResult['data'];
           _usuario = Usuario.fromJson(usuarioData);
           _state = AuthState.authenticated;
           _errorMessage = null;

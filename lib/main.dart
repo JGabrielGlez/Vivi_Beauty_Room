@@ -17,7 +17,6 @@ void main() async {
     apiClient: apiClient,
     tokenStorage: tokenStorage,
   );
-  await authProvider.restoreSession();
 
   runApp(
     MultiProvider(
@@ -26,7 +25,7 @@ void main() async {
         Provider<ApiClient>.value(value: apiClient),
         ChangeNotifierProvider<AuthProvider>.value(value: authProvider),
       ],
-      child: const App(),
+      child: App(authProvider: authProvider),
     ),
   );
 }

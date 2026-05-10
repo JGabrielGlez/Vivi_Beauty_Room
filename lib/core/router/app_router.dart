@@ -33,81 +33,81 @@ class _SplashScreen extends StatelessWidget {
   }
 }
 
-/// The route configuration.
-final GoRouter router = GoRouter(
-  // Esta es la pantalla que se muestra cuando se abre por primera vez la app
-  initialLocation: '/login',
-  redirect: (context, state) {
-    final authProvider = context.read<AuthProvider>();
+GoRouter createAppRouter(AuthProvider authProvider) {
+  return GoRouter(
+    initialLocation: '/splash',
+    refreshListenable: authProvider,
+    redirect: (context, state) {
+      final currentPath = state.uri.path;
 
-    // Si aún se está restaurando la sesión, mostrar splash
-    if (authProvider.state == AuthState.initial) {
+      if (authProvider.state == AuthState.initial) {
+        return currentPath == '/splash' ? null : '/splash';
+      }
+
+      if (currentPath == '/splash') {
+        return authProvider.isAuthenticated ? '/' : '/login';
+      }
+
+      final isAuthenticated = authProvider.isAuthenticated;
+      final isOnLogin = currentPath == '/login';
+
+      // Si autenticado pero en login, redirigir a home
+      if (isAuthenticated && isOnLogin) {
+        return '/';
+      }
+
+      // Si no autenticado y no en login, redirigir a login
+      if (!isAuthenticated && !isOnLogin) {
+        return '/login';
+      }
+
       return null;
-    }
-
-    final isAuthenticated = authProvider.isAuthenticated;
-    final isOnLogin = state.fullPath == '/login';
-
-    // Si autenticado pero en login, redirigir a home
-    if (isAuthenticated && isOnLogin) {
-      return '/';
-    }
-
-    // Si no autenticado y no en login, redirigir a login
-    if (!isAuthenticated && !isOnLogin) {
-      return '/login';
-    }
-
-    return null;
-  },
-  routes: <RouteBase>[
-    ShellRoute(
-      builder: (context, state, child) => MainShell(child: child),
-      routes: [
-        GoRoute(
-          path: '/',
-          name: 'home',
-          // Se define la pantalla principal, que en este caso es la agenda
-          builder: (context, GoRouterState state) {
-            return const AgendaScreen();
-          },
-          routes: [
-            GoRoute(
-              name: 'detalleCita',
-              path: 'detalle-cita',
-              builder: (context, state) => DetalleCitaScreen(),
-            ),
-          ],
-        ),
-        GoRoute(
-          name: 'servicios',
-          path: '/servicios',
-          builder: (context, GoRouterState state) {
-            return const CatalogoScreen();
-          },
-        ),
-        GoRoute(
-          name: 'clientes',
-          path: '/clientes',
-          builder: (context, state) {
-            return const DirectorioScreen();
-          },
-        ),
-      ],
-    ),
-
-    GoRoute(
-      name: 'login',
-      path: '/login',
-      builder: (context, GoRouterState state) {
-        return const LoginScreen();
-      },
-    ),
-
-    // Splash screen para estado inicial
-    GoRoute(
-      path: '/splash',
-      builder: (context, state) => const _SplashScreen(),
-    ),
-  ],
-);
+    },
+    routes: <RouteBase>[
+      ShellRoute(
+        builder: (context, state, child) => MainShell(child: child),
+        routes: [
+          GoRoute(
+            path: '/',
+            name: 'home',
+            builder: (context, GoRouterState state) {
+              return const AgendaScreen();
+            },
+            routes: [
+              GoRoute(
+                name: 'detalleCita',
+                path: 'detalle-cita',
+                builder: (context, state) => DetalleCitaScreen(),
+              ),
+            ],
+          ),
+          GoRoute(
+            name: 'servicios',
+            path: '/servicios',
+            builder: (context, GoRouterState state) {
+              return const CatalogoScreen();
+            },
+          ),
+          GoRoute(
+            name: 'clientes',
+            path: '/clientes',
+            builder: (context, GoRouterState state) {
+              return const DirectorioScreen();
+            },
+          ),
+        ],
+      ),
+      GoRoute(
+        name: 'login',
+        path: '/login',
+        builder: (context, GoRouterState state) {
+          return const LoginScreen();
+        },
+      ),
+      GoRoute(
+        path: '/splash',
+        builder: (context, state) => const _SplashScreen(),
+      ),
+    ],
+  );
+}
