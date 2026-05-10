@@ -114,6 +114,16 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Cierre forzado silencioso cuando backend responde 401 en endpoints protegidos.
+  Future<void> forceUnauthorizedLogout() async {
+    await _tokenStorage.clearAll();
+    _token = null;
+    _usuario = null;
+    _state = AuthState.unauthenticated;
+    _errorMessage = null;
+    notifyListeners();
+  }
+
   /// Limpiar error
   void clearError() {
     _errorMessage = null;

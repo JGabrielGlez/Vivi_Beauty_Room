@@ -5,8 +5,17 @@ import 'api_config.dart';
 
 class ApiClient {
   final TokenStorageService tokenStorage;
+  Future<void> Function()? onUnauthorized;
 
-  ApiClient({required this.tokenStorage});
+  ApiClient({required this.tokenStorage, this.onUnauthorized});
+
+  Future<void> _handleUnauthorized() async {
+    await tokenStorage.clearAll();
+    final callback = onUnauthorized;
+    if (callback != null) {
+      await callback();
+    }
+  }
 
   Future<Map<String, String>> _authJsonHeaders() async {
     final token = await tokenStorage.readToken();
@@ -82,7 +91,7 @@ class ApiClient {
         final data = jsonDecode(response.body);
         return {'success': true, 'data': data};
       } else if (response.statusCode == 401) {
-        await tokenStorage.clearAll();
+        await _handleUnauthorized();
         return {
           'success': false,
           'error': 'Token inválido o expirado',
@@ -123,7 +132,7 @@ class ApiClient {
       }
 
       if (response.statusCode == 401) {
-        await tokenStorage.clearAll();
+        await _handleUnauthorized();
         return {
           'success': false,
           'statusCode': 401,
@@ -175,7 +184,7 @@ class ApiClient {
       }
 
       if (response.statusCode == 401) {
-        await tokenStorage.clearAll();
+        await _handleUnauthorized();
         return {
           'success': false,
           'statusCode': 401,

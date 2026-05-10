@@ -18,6 +18,9 @@ void main() async {
     tokenStorage: tokenStorage,
   );
 
+  // Cualquier 401 en endpoints protegidos fuerza cierre de sesión inmediato.
+  apiClient.onUnauthorized = authProvider.forceUnauthorizedLogout;
+
   runApp(
     MultiProvider(
       providers: [
