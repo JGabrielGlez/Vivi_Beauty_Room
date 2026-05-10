@@ -49,6 +49,10 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
   final TextEditingController _anticipoController = TextEditingController();
   String? _errorAnticipo;
 
+  final TextEditingController _notasController = TextEditingController();
+  bool _guardando = false;
+  String? _errorGuardar;
+
   // Búsqueda de clientas
   final TextEditingController _busquedaController = TextEditingController();
   List<Clienta> _resultadosBusqueda = [];
@@ -65,6 +69,7 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
   @override
   void dispose() {
     _anticipoController.dispose();
+    _notasController.dispose();
     _busquedaController.dispose();
     _debounceTimer?.cancel();
     super.dispose();
@@ -541,11 +546,45 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
                 ),
               ],
             ),
-            const SizedBox(height: 30),
+            const SizedBox(height: 20),
 
+            // Notas sobre la cita
+            _buildLabel('NOTAS'),
+            const SizedBox(height: 8),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFEEEEEE)),
+              ),
+              child: TextField(
+                controller: _notasController,
+                maxLines: 3,
+                maxLength: 200,
+                decoration: InputDecoration(
+                  border: InputBorder.none,
+                  hintText: 'Ej. Alérgica al látex, traer referencia...',
+                  hintStyle: TextStyle(color: Colors.grey[400], fontSize: 13),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  counterStyle: TextStyle(color: Colors.grey[400], fontSize: 11),
+                ),
+                style: const TextStyle(fontSize: 14, color: Color(0xFF1A1A1A)),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            if (_errorGuardar != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Text(
+                  _errorGuardar!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.red, fontSize: 13),
+                ),
+              ),
             PrimaryButton(
-              text: 'Guardar Cita',
-              onPressed: () => Navigator.pop(context),
+              text: _guardando ? 'Guardando...' : 'Guardar Cita',
+              onPressed: _guardando ? null : _guardarCita,
             ),
           ],
         ),
@@ -744,6 +783,66 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
       return '${s.duracionMin} min';
     } catch (_) {
       return '-- min';
+    }
+  }
+
+  Future<void> _guardarCita() async {
+    if (_servicioSeleccionadoId == null ||
+        _fechaSeleccionada == null ||
+        _horaSeleccionada == null) {
+      setState(() => _errorGuardar = 'Completa el servicio, fecha y hora');
+      return;
+    }
+    if (_errorFechaHora != null || _errorSolapamiento != null || _errorAnticipo != null) {
+      setState(() => _errorGuardar = 'Corrige los errores antes de guardar');
+      return;
+    }
+    setState(() => _errorGuardar = null);
+
+    final servicio = _servicios.firstWhere((s) => s.id == _servicioSeleccionadoId);
+    final f = _fechaSeleccionada!;
+    final h = _horaSeleccionada!;
+    final fechaHora =
+        '${f.year}-${f.month.toString().padLeft(2, '0')}-${f.day.toString().padLeft(2, '0')}'
+        'T${h.hour.toString().padLeft(2, '0')}:${h.minute.toString().padLeft(2, '0')}:00';
+    final duracion = servicio.duracionMin + _tiempoExtra + 30;
+    final montoAnticipo = double.tryParse(_anticipoController.text) ?? 0;
+    final notas = _notasController.text.trim().isEmpty ? null : _notasController.text.trim();
+
+    setState(() => _guardando = true);
+
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/api/agenda/citas'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'idClienta': _clientaSeleccionada?.id,
+          'idServicio': _servicioSeleccionadoId,
+          'fechaHora': fechaHora,
+          'duracion': duracion,
+          'montoAnticipo': montoAnticipo,
+          'anticipoPagado': 0,
+          'notas': notas,
+        }),
+      );
+
+      if (!mounted) return;
+
+      if (response.statusCode == 201) {
+        Navigator.pop(context, true);
+      } else {
+        final body = jsonDecode(response.body);
+        setState(() {
+          _errorGuardar = body['error'] ?? 'Error al guardar la cita';
+          _guardando = false;
+        });
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _errorGuardar = 'No se pudo conectar al servidor';
+        _guardando = false;
+      });
     }
   }
 
