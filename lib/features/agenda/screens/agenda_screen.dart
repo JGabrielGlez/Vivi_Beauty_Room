@@ -154,6 +154,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
                       } else if (value == 'info') {
                         showDialog(
                           context: context,
+                          useRootNavigator: false,
                           builder: (ctx) => AlertDialog(
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
@@ -177,6 +178,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
                         final authProvider = context.read<AuthProvider>();
                         showDialog(
                           context: context,
+                          useRootNavigator: false,
                           builder: (ctx) => AlertDialog(
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
