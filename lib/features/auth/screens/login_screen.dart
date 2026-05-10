@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/router/app_router.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 
 // Pantalla de login - Rocío
 // Widgets de texto y botón son temporales, se reemplazarán por los de José Luis
@@ -12,15 +13,40 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _usuarioController = TextEditingController();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
 
   @override
   void dispose() {
-    _usuarioController.dispose();
+    _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleLogin() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Completa todos los campos')),
+      );
+      return;
+    }
+
+    final authProvider = context.read<AuthProvider>();
+    final success = await authProvider.signIn(email, password);
+
+    if (!mounted) return;
+
+    if (success) {
+      context.goNamed('home');
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(authProvider.errorMessage ?? 'Error al iniciar sesión')),
+      );
+    }
   }
 
   @override
@@ -31,124 +57,149 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 28.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const SizedBox(height: 40),
-
-                // Logo del salón
-                ClipOval(
-                  child: Image.asset(
-                    'assets/images/logo.jpeg',
-                    width: 140,
-                    height: 140,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-
-                const SizedBox(height: 36),
-
-                // Texto de bienvenida
-                const Text(
-                  'Bienvenida',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 24,
-                    color: Color(0xFF1A1A1A),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'Ingresa a tu cuenta',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w400,
-                    fontSize: 13,
-                    color: Color(0xFF888888),
-                  ),
-                ),
-
-                const SizedBox(height: 32),
-
-                // Campo de usuario
-                _AppTextField(
-                  label: 'Usuario',
-                  placeholder: 'Tu usuario',
-                  controller: _usuarioController,
-                ),
-
-                // Campo de contraseña con opción de mostrar/ocultar
-                _AppTextField(
-                  label: 'Contraseña',
-                  placeholder: '••••••••',
-                  controller: _passwordController,
-                  obscureText: _obscurePassword,
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _obscurePassword
-                          ? Icons.visibility_off_outlined
-                          : Icons.visibility_outlined,
-                      color: const Color(0xFF888888),
-                      size: 20,
-                    ),
-                    onPressed: () =>
-                        setState(() => _obscurePassword = !_obscurePassword),
-                  ),
-                ),
-
-                const SizedBox(height: 4),
-
-                // Link para recuperar contraseña
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: GestureDetector(
-                    onTap: () {},
-                    child: const Text(
-                      '¿Olvidaste tu contraseña?',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFFD4748F),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 28),
-
-                // Botón principal para iniciar sesión
-                _PrimaryButton(
-                  label: 'Iniciar sesión',
-                  onPressed: () {
-                    context.goNamed('home');
-                  },
-                ),
-
-                const SizedBox(height: 20),
-
-                // Link de registro
-                Row(
+            child: Consumer<AuthProvider>(
+              builder: (context, authProvider, _) {
+                return Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text(
-                      '¿No tienes una cuenta? ',
-                      style: TextStyle(fontSize: 12, color: Color(0xFF888888)),
+                    const SizedBox(height: 40),
+
+                    // Logo del salón
+                    ClipOval(
+                      child: Image.asset(
+                        'assets/images/logo.jpeg',
+                        width: 140,
+                        height: 140,
+                        fit: BoxFit.cover,
+                      ),
                     ),
-                    GestureDetector(
-                      onTap: () {},
-                      child: const Text(
-                        'Regístrate',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFFD4748F),
-                          fontWeight: FontWeight.w600,
+
+                    const SizedBox(height: 36),
+
+                    // Texto de bienvenida
+                    const Text(
+                      'Bienvenida',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 24,
+                        color: Color(0xFF1A1A1A),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Ingresa a tu cuenta',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w400,
+                        fontSize: 13,
+                        color: Color(0xFF888888),
+                      ),
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    // Mostrar errores si existen
+                    if (authProvider.errorMessage != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            border: Border.all(color: Colors.red.shade300),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            authProvider.errorMessage!,
+                            style: TextStyle(
+                              color: Colors.red.shade700,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                    // Campo de email
+                    _AppTextField(
+                      label: 'Email',
+                      placeholder: 'tu@email.com',
+                      controller: _emailController,
+                      enabled: !authProvider.isLoading,
+                    ),
+
+                    // Campo de contraseña con opción de mostrar/ocultar
+                    _AppTextField(
+                      label: 'Contraseña',
+                      placeholder: '••••••••',
+                      controller: _passwordController,
+                      obscureText: _obscurePassword,
+                      enabled: !authProvider.isLoading,
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                          color: const Color(0xFF888888),
+                          size: 20,
+                        ),
+                        onPressed: () =>
+                            setState(() => _obscurePassword = !_obscurePassword),
+                      ),
+                    ),
+
+                    const SizedBox(height: 4),
+
+                    // Link para recuperar contraseña
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: GestureDetector(
+                        onTap: () {},
+                        child: const Text(
+                          '¿Olvidaste tu contraseña?',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFFD4748F),
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
                     ),
-                  ],
-                ),
 
-                const SizedBox(height: 40),
-              ],
+                    const SizedBox(height: 28),
+
+                    // Botón principal para iniciar sesión
+                    _PrimaryButton(
+                      label: authProvider.isLoading ? 'Cargando...' : 'Iniciar sesión',
+                      onPressed: authProvider.isLoading ? () {} : _handleLogin,
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // Link de registro
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text(
+                          '¿No tienes una cuenta? ',
+                          style: TextStyle(fontSize: 12, color: Color(0xFF888888)),
+                        ),
+                        GestureDetector(
+                          onTap: () {},
+                          child: const Text(
+                            'Regístrate',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFFD4748F),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 40),
+                  ],
+                );
+              },
             ),
           ),
         ),
@@ -168,6 +219,7 @@ class _AppTextField extends StatelessWidget {
     required this.controller,
     this.obscureText = false,
     this.suffixIcon,
+    this.enabled = true,
   });
 
   final String label;
@@ -175,6 +227,7 @@ class _AppTextField extends StatelessWidget {
   final TextEditingController controller;
   final bool obscureText;
   final Widget? suffixIcon;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -193,6 +246,7 @@ class _AppTextField extends StatelessWidget {
         TextField(
           controller: controller,
           obscureText: obscureText,
+          enabled: enabled,
           style: const TextStyle(fontSize: 14, color: Color(0xFF1A1A1A)),
           decoration: InputDecoration(
             hintText: placeholder,
