@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:vivi_room/features/clientes/providers/clientas_provider.dart';
 import 'package:vivi_room/shared/widgets/app_text_field.dart';
@@ -38,7 +39,11 @@ class _NuevaClientaModalState extends State<NuevaClientaModal> {
 
     setState(() {
       _nombreError = nombre.isEmpty ? 'Nombre obligatorio' : null;
-      _telefonoError = telefono.isEmpty ? 'Teléfono obligatorio' : null;
+      _telefonoError = telefono.isEmpty
+          ? 'Teléfono obligatorio'
+          : (telefono.length != 10
+                ? 'El teléfono debe tener 10 dígitos'
+                : null);
       _formError = null;
     });
 
@@ -129,8 +134,13 @@ class _NuevaClientaModalState extends State<NuevaClientaModal> {
             AppTextField(
               label: 'Teléfono',
               controller: _telefonoController,
-              keyboardType: TextInputType.phone,
+              keyboardType: TextInputType.number,
               errorText: _telefonoError,
+              maxLength: 10,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(10),
+              ],
             ),
             const SizedBox(height: 16),
             _buildLabel('INFORMACIÓN ADICIONAL'),
