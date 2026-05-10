@@ -37,6 +37,7 @@ class _EditarCitaModalState extends State<EditarCitaModal> {
 
   final TextEditingController _notasController = TextEditingController();
   bool _guardando = false;
+  bool _cancelando = false;
   String? _errorGuardar;
 
   // Estado de carga inicial de la cita
@@ -672,7 +673,22 @@ class _EditarCitaModalState extends State<EditarCitaModal> {
                 ),
               PrimaryButton(
                 text: _guardando ? 'Guardando...' : 'Guardar Cambios',
-                onPressed: _guardando ? null : _guardarCambios,
+                onPressed: (_guardando || _cancelando) ? null : _guardarCambios,
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: (_guardando || _cancelando) ? null : _cancelarCita,
+                  child: Text(
+                    _cancelando ? 'Cancelando...' : 'Cancelar cita',
+                    style: TextStyle(
+                      color: _cancelando ? Colors.grey : Colors.red[400],
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
               ),
             ],
           ],
@@ -934,6 +950,63 @@ class _EditarCitaModalState extends State<EditarCitaModal> {
       setState(() {
         _errorGuardar = 'No se pudo conectar al servidor';
         _guardando = false;
+      });
+    }
+  }
+
+  Future<void> _cancelarCita() async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('¿Cancelar cita?',
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        content: const Text(
+            'Esta acción marcará la cita como cancelada. ¿Deseas continuar?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('No', style: TextStyle(color: Colors.grey[600])),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red[400],
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Sí, cancelar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true) return;
+
+    setState(() => _cancelando = true);
+
+    try {
+      final response = await http.delete(
+        Uri.parse('$_baseUrl/api/agenda/citas/$_citaId'),
+      );
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        Navigator.pop(context, 'cancelada');
+      } else {
+        final body = jsonDecode(response.body);
+        setState(() {
+          _errorGuardar = body['error'] ?? 'Error al cancelar la cita';
+          _cancelando = false;
+        });
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _errorGuardar = 'No se pudo conectar al servidor';
+        _cancelando = false;
       });
     }
   }
