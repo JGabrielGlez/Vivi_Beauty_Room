@@ -43,6 +43,10 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
   // Mensaje de error si la fecha+hora combinada no es futura
   String? _errorFechaHora;
 
+  // Mensaje de error si la nueva cita se solapa con una existente
+  String? _errorSolapamiento;
+  bool _verificandoSolapamiento = false;
+
   // Búsqueda de clientas
   final TextEditingController _busquedaController = TextEditingController();
   List<Clienta> _resultadosBusqueda = [];
@@ -376,7 +380,10 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
                           children: [
                             GestureDetector(
                               onTap: () {
-                                if (_tiempoExtra > 0) setState(() => _tiempoExtra -= 30);
+                                if (_tiempoExtra > 0) {
+                                  setState(() => _tiempoExtra -= 30);
+                                  _verificarSolapamiento();
+                                }
                               },
                               child: Container(
                                 width: 28, height: 28,
@@ -392,7 +399,10 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
                               style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                             ),
                             GestureDetector(
-                              onTap: () => setState(() => _tiempoExtra += 30),
+                              onTap: () {
+                                setState(() => _tiempoExtra += 30);
+                                _verificarSolapamiento();
+                              },
                               child: Container(
                                 width: 28, height: 28,
                                 decoration: BoxDecoration(
@@ -410,6 +420,24 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
                 ),
               ],
             ),
+            if (_verificandoSolapamiento)
+              const Padding(
+                padding: EdgeInsets.only(top: 6),
+                child: Center(
+                  child: SizedBox(
+                    width: 14, height: 14,
+                    child: CircularProgressIndicator(color: Color(0xFFD4748F), strokeWidth: 2),
+                  ),
+                ),
+              ),
+            if (_errorSolapamiento != null && !_verificandoSolapamiento)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  _errorSolapamiento!,
+                  style: const TextStyle(color: Colors.red, fontSize: 12),
+                ),
+              ),
             const SizedBox(height: 20),
 
             // Costos
@@ -512,6 +540,123 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
     );
   }
 
+  // Consulta las citas del día seleccionado y detecta si la nueva cita se solapa
+  Future<void> _verificarSolapamiento() async {
+    if (_servicioSeleccionadoId == null || _errorFechaHora != null) {
+      setState(() => _errorSolapamiento = null);
+      return;
+    }
+
+    final servicio = _servicios.firstWhere((s) => s.id == _servicioSeleccionadoId);
+    final fecha = _fechaSeleccionada;
+    final inicioStr =
+        '${fecha.year}-${fecha.month.toString().padLeft(2, '0')}-${fecha.day.toString().padLeft(2, '0')}';
+
+    final newStart = DateTime(
+      fecha.year, fecha.month, fecha.day,
+      _horaSeleccionada.hour, _horaSeleccionada.minute,
+    );
+    // Fin = duración del servicio + tiempo extra + 30 min de buffer
+    final newEnd = newStart.add(Duration(minutes: servicio.duracionMin + _tiempoExtra + 30));
+
+    setState(() => _verificandoSolapamiento = true);
+
+    try {
+      final uri = Uri.parse('$_baseUrl/api/agenda/citas/semana')
+          .replace(queryParameters: {'inicio': inicioStr});
+      final response = await http.get(uri);
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        String? conflicto;
+
+        for (final cita in data) {
+          if (cita['estado'] == 'CANCELADA') continue;
+
+          final existStart = DateTime.parse(cita['fechaHora'] as String);
+          if (existStart.year != fecha.year ||
+              existStart.month != fecha.month ||
+              existStart.day != fecha.day) {
+            continue;
+          }
+
+          final existEnd = existStart.add(Duration(minutes: cita['duracion'] as int));
+
+          if (newStart.isBefore(existEnd) && newEnd.isAfter(existStart)) {
+            final h = existStart.hour.toString().padLeft(2, '0');
+            final m = existStart.minute.toString().padLeft(2, '0');
+            final duracionTotal = servicio.duracionMin + _tiempoExtra + 30;
+            final siguiente = _siguienteDisponible(data, newStart, duracionTotal, fecha);
+            conflicto = siguiente != null
+                ? 'Se solapa con la cita de las $h:$m. Próximo disponible: $siguiente'
+                : 'Se solapa con la cita de las $h:$m';
+            break;
+          }
+        }
+
+        setState(() {
+          _errorSolapamiento = conflicto;
+          _verificandoSolapamiento = false;
+        });
+      } else {
+        setState(() => _verificandoSolapamiento = false);
+      }
+    } catch (_) {
+      setState(() => _verificandoSolapamiento = false);
+    }
+  }
+
+  // Busca el siguiente slot libre de 30 min a partir del fin del conflicto (hasta las 21:00)
+  String? _siguienteDisponible(
+    List<dynamic> citasDelDia,
+    DateTime newStart,
+    int duracionMin,
+    DateTime fecha,
+  ) {
+    // Intervalos ocupados del día (sin canceladas)
+    final intervals = citasDelDia
+        .where((c) => c['estado'] != 'CANCELADA')
+        .where((c) {
+          final s = DateTime.parse(c['fechaHora'] as String);
+          return s.year == fecha.year && s.month == fecha.month && s.day == fecha.day;
+        })
+        .map((c) {
+          final s = DateTime.parse(c['fechaHora'] as String);
+          return (start: s, end: s.add(Duration(minutes: c['duracion'] as int)));
+        })
+        .toList();
+
+    // Fin máximo de los conflictos con el slot actual
+    DateTime? maxConflictEnd;
+    final newEnd = newStart.add(Duration(minutes: duracionMin));
+    for (final i in intervals) {
+      if (newStart.isBefore(i.end) && newEnd.isAfter(i.start)) {
+        if (maxConflictEnd == null || i.end.isAfter(maxConflictEnd)) {
+          maxConflictEnd = i.end;
+        }
+      }
+    }
+    if (maxConflictEnd == null) return null;
+
+    // Redondear hacia arriba al siguiente slot de 30 min
+    final totalMin = maxConflictEnd.hour * 60 + maxConflictEnd.minute;
+    int candidateMin = ((totalMin + 29) ~/ 30) * 30;
+
+    // Iterar de 30 en 30 hasta las 21:00
+    while (candidateMin < 21 * 60) {
+      final cStart = DateTime(fecha.year, fecha.month, fecha.day, candidateMin ~/ 60, candidateMin % 60);
+      final cEnd = cStart.add(Duration(minutes: duracionMin));
+      final hasConflict = intervals.any((i) => cStart.isBefore(i.end) && cEnd.isAfter(i.start));
+      if (!hasConflict) {
+        final h = (candidateMin ~/ 60).toString().padLeft(2, '0');
+        final m = (candidateMin % 60).toString().padLeft(2, '0');
+        return '$h:$m';
+      }
+      candidateMin += 30;
+    }
+    return null;
+  }
+
   // Retorna la duración del servicio seleccionado, o '--' si no hay ninguno
   String _duracionServicio() {
     if (_servicioSeleccionadoId == null) return '-- min';
@@ -562,6 +707,7 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
             _fechaSeleccionada = picked;
             _validarFechaHora(picked, _horaSeleccionada);
           });
+          _verificarSolapamiento();
         }
       },
       child: Container(
@@ -691,6 +837,7 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
             _horaSeleccionada = result;
             _validarFechaHora(_fechaSeleccionada, result);
           });
+          _verificarSolapamiento();
         }
       },
       child: Container(
