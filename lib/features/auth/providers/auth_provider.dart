@@ -18,8 +18,8 @@ class AuthProvider extends ChangeNotifier {
   AuthProvider({
     required ApiClient apiClient,
     required TokenStorageService tokenStorage,
-  })  : _apiClient = apiClient,
-        _tokenStorage = tokenStorage;
+  }) : _apiClient = apiClient,
+       _tokenStorage = tokenStorage;
 
   // Getters
   AuthState get state => _state;
@@ -53,7 +53,9 @@ class AuthProvider extends ChangeNotifier {
           _token = null;
           _usuario = null;
           _state = AuthState.unauthenticated;
-          _errorMessage = meResult['error'];
+          _errorMessage = meResult['statusCode'] == 401
+              ? null
+              : meResult['error'];
         }
       } else {
         _state = AuthState.unauthenticated;

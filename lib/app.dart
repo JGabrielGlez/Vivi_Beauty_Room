@@ -18,10 +18,24 @@ class _AppState extends State<App> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _router = createAppRouter(widget.authProvider);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       widget.authProvider.restoreSession();
     });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      widget.authProvider.restoreSession();
+    }
   }
 
   @override
