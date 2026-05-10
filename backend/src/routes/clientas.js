@@ -16,7 +16,10 @@ router.get("/", (req, res) => {
       SELECT c.*,
         (SELECT fechaHora FROM citas
          WHERE idClienta = c.idClienta AND estado = 'COMPLETADA'
-         ORDER BY fechaHora DESC LIMIT 1) AS ultimaVisita
+         ORDER BY fechaHora DESC LIMIT 1) AS ultimaVisita,
+        (SELECT fechaHora FROM citas
+         WHERE idClienta = c.idClienta AND estado = 'CONFIRMADA'
+         ORDER BY fechaHora DESC LIMIT 1) AS ultimaCitaConfirmada
       FROM clientas c
       WHERE c.eliminada = 0
         AND (c.nombre LIKE ? OR c.telefono LIKE ?)
@@ -31,7 +34,10 @@ router.get("/", (req, res) => {
       SELECT c.*,
         (SELECT fechaHora FROM citas
          WHERE idClienta = c.idClienta AND estado = 'COMPLETADA'
-         ORDER BY fechaHora DESC LIMIT 1) AS ultimaVisita
+         ORDER BY fechaHora DESC LIMIT 1) AS ultimaVisita,
+        (SELECT fechaHora FROM citas
+         WHERE idClienta = c.idClienta AND estado = 'CONFIRMADA'
+         ORDER BY fechaHora DESC LIMIT 1) AS ultimaCitaConfirmada
       FROM clientas c
       WHERE c.eliminada = 0
       ORDER BY c.nombre ASC

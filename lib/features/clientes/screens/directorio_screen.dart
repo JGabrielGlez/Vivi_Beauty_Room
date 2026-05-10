@@ -123,8 +123,13 @@ class _DirectorioScreenViewState extends State<_DirectorioScreenView> {
   Widget build(BuildContext context) {
     final provider = context.watch<ClientasProvider>();
     final filtered = provider.filteredClientas;
-    final recientes = filtered.take(2).toList();
-    final todas = filtered.skip(recientes.length).toList();
+    final conConfirmada = filtered
+        .where((c) => c.ultimaCitaConfirmada != null && c.ultimaCitaConfirmada!.isNotEmpty)
+        .toList()
+      ..sort((a, b) => b.ultimaCitaConfirmada!.compareTo(a.ultimaCitaConfirmada!));
+    final recientes = conConfirmada.take(3).toList();
+    final recientesIds = recientes.map((c) => c.idClienta).toSet();
+    final todas = filtered.where((c) => !recientesIds.contains(c.idClienta)).toList();
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAF8F8),

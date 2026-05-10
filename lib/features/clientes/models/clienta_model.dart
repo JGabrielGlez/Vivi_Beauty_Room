@@ -6,6 +6,7 @@ class Clienta {
   final String? preferencias;
   final String? notas;
   final String? ultimaVisita;
+  final String? ultimaCitaConfirmada;
 
   const Clienta({
     required this.idClienta,
@@ -15,6 +16,7 @@ class Clienta {
     this.preferencias,
     this.notas,
     this.ultimaVisita,
+    this.ultimaCitaConfirmada,
   });
 
   factory Clienta.fromJson(Map<String, dynamic> json) {
@@ -26,6 +28,7 @@ class Clienta {
       preferencias: json['preferencias']?.toString(),
       notas: json['notas']?.toString(),
       ultimaVisita: json['ultimaVisita']?.toString(),
+      ultimaCitaConfirmada: json['ultimaCitaConfirmada']?.toString(),
     );
   }
 }
