@@ -19,8 +19,8 @@ class NuevaCitaModal extends StatefulWidget {
 }
 
 class _NuevaCitaModalState extends State<NuevaCitaModal> {
-  // Duración seleccionada en los chips de minutos
-  String duracionSeleccionada = '60 MIN';
+  // Minutos extra sobre la duración del servicio (incrementa de 30 en 30)
+  int _tiempoExtra = 0;
 
   // Lista de servicios cargados desde la API
   List<Servicio> _servicios = [];
@@ -329,15 +329,86 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
               ),
             const SizedBox(height: 20),
 
-            // Selector de duración
+            // Duración: servicio + tiempo extra
             _buildLabel('DURACIÓN'),
             const SizedBox(height: 8),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children:
-                  ['30 MIN', '45 MIN', '60 MIN', '90 MIN']
-                      .map((t) => _buildDuracionTab(t))
-                      .toList(),
+              children: [
+                // Duración del servicio seleccionado
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8F9FA),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFEEEEEE)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Servicio', style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+                        const SizedBox(height: 4),
+                        Text(
+                          _duracionServicio(),
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1A1A1A)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 15),
+                // Incrementador de tiempo extra (pasos de 30 min)
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFEEEEEE)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Tiempo extra', style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+                        const SizedBox(height: 4),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            GestureDetector(
+                              onTap: () {
+                                if (_tiempoExtra > 0) setState(() => _tiempoExtra -= 30);
+                              },
+                              child: Container(
+                                width: 28, height: 28,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFD4748F).withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Icon(Icons.remove, size: 16, color: Color(0xFFD4748F)),
+                              ),
+                            ),
+                            Text(
+                              '$_tiempoExtra min',
+                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                            ),
+                            GestureDetector(
+                              onTap: () => setState(() => _tiempoExtra += 30),
+                              child: Container(
+                                width: 28, height: 28,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFD4748F).withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Icon(Icons.add, size: 16, color: Color(0xFFD4748F)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 20),
 
@@ -415,8 +486,6 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
       onTap: () {
         setState(() {
           _servicioSeleccionadoId = servicio.id;
-          // Auto-seleccionar la duración más cercana a la del servicio
-          _autoSeleccionarDuracion(servicio.duracionMin);
         });
       },
       child: Container(
@@ -443,14 +512,15 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
     );
   }
 
-  // Selecciona automáticamente el chip de duración más cercano al del servicio
-  void _autoSeleccionarDuracion(int duracionMin) {
-    const opciones = [30, 45, 60, 90];
-    final cercano = opciones.reduce(
-      (a, b) =>
-          (a - duracionMin).abs() < (b - duracionMin).abs() ? a : b,
-    );
-    duracionSeleccionada = '$cercano MIN';
+  // Retorna la duración del servicio seleccionado, o '--' si no hay ninguno
+  String _duracionServicio() {
+    if (_servicioSeleccionadoId == null) return '-- min';
+    try {
+      final s = _servicios.firstWhere((s) => s.id == _servicioSeleccionadoId);
+      return '${s.duracionMin} min';
+    } catch (_) {
+      return '-- min';
+    }
   }
 
   // Valida que la combinación de fecha + hora sea futura y actualiza el error
@@ -764,43 +834,4 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
     );
   }
 
-  Widget _buildDuracionTab(String label) {
-    final isSelected = duracionSeleccionada == label;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          duracionSeleccionada = label;
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.white : const Color(0xFFF8F9FA),
-          borderRadius: BorderRadius.circular(10),
-          border:
-              isSelected
-                  ? Border.all(color: const Color(0xFFD4748F).withValues(alpha: 0.2))
-                  : null,
-          boxShadow:
-              isSelected
-                  ? [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 4,
-                    ),
-                  ]
-                  : null,
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color:
-                isSelected ? const Color(0xFFD4748F) : Colors.grey,
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-    );
-  }
 }
