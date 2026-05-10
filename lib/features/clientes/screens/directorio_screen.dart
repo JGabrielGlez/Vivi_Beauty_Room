@@ -33,6 +33,51 @@ class _DirectorioScreenView extends StatefulWidget {
 class _DirectorioScreenViewState extends State<_DirectorioScreenView> {
   final _searchController = TextEditingController();
 
+  Future<void> _confirmarEliminacion(Clienta clienta) async {
+    final provider = context.read<ClientasProvider>();
+
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirmar desactivación'),
+        content: const Text(
+          '¿Desactivar esta clienta? Su historial de citas se conservará.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text(
+              'Desactivar',
+              style: TextStyle(color: Color(0xFFD4748F)),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmado != true) return;
+
+    final exito = await provider.eliminarClienta(clienta.idClienta);
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          exito
+              ? 'Clienta desactivada correctamente.'
+              : 'Error al desactivar la clienta.',
+        ),
+        backgroundColor:
+            exito ? const Color(0xFF4CAF50) : const Color(0xFFD4748F),
+      ),
+    );
+  }
+
   Future<void> _openNuevaClientaModal() async {
     final clientasProvider = context.read<ClientasProvider>();
 
@@ -165,8 +210,9 @@ class _DirectorioScreenViewState extends State<_DirectorioScreenView> {
             const SizedBox(height: 8),
             ...recientes.map(
               (clienta) => _ClienteRow(
-                nombre: clienta.nombre,
+                clienta: clienta,
                 info: _clientaInfo(clienta),
+                onEliminar: () => _confirmarEliminacion(clienta),
               ),
             ),
             const SizedBox(height: 16),
@@ -176,8 +222,9 @@ class _DirectorioScreenViewState extends State<_DirectorioScreenView> {
             const SizedBox(height: 8),
             ...todas.map(
               (clienta) => _ClienteRow(
-                nombre: clienta.nombre,
+                clienta: clienta,
                 info: _clientaInfo(clienta),
+                onEliminar: () => _confirmarEliminacion(clienta),
               ),
             ),
             const SizedBox(height: 16),
@@ -218,9 +265,14 @@ class _SectionLabel extends StatelessWidget {
 
 // Tarjeta individual de cada clienta con avatar, nombre y última cita
 class _ClienteRow extends StatelessWidget {
-  const _ClienteRow({required this.nombre, required this.info});
-  final String nombre;
+  const _ClienteRow({
+    required this.clienta,
+    required this.info,
+    required this.onEliminar,
+  });
+  final Clienta clienta;
   final String info;
+  final VoidCallback onEliminar;
 
   @override
   Widget build(BuildContext context) {
@@ -240,16 +292,14 @@ class _ClienteRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Círculo con la inicial del nombre de la clienta
-          ClienteAvatar(nombre: nombre),
+          ClienteAvatar(nombre: clienta.nombre),
           const SizedBox(width: 12),
-          // Nombre y detalle de su última cita
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  nombre,
+                  clienta.nombre,
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 14,
@@ -267,7 +317,13 @@ class _ClienteRow extends StatelessWidget {
               ],
             ),
           ),
-          const Icon(Icons.chevron_right, color: Color(0xFFCCCCCC), size: 20),
+          IconButton(
+            icon: const Icon(Icons.delete_outline, color: Color(0xFFD4748F), size: 20),
+            onPressed: onEliminar,
+            tooltip: 'Desactivar clienta',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
         ],
       ),
     );

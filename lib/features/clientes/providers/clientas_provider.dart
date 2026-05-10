@@ -60,6 +60,24 @@ class ClientasProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<bool> eliminarClienta(String id) async {
+    _errorMessage = null;
+    notifyListeners();
+
+    final result = await _apiClient.eliminarClienta(id);
+
+    if (result['success'] == true) {
+      await fetchClientas();
+      return true;
+    }
+
+    _errorMessage = result['statusCode'] == 401
+        ? null
+        : (result['error'] ?? 'No se pudo desactivar la clienta');
+    notifyListeners();
+    return false;
+  }
+
   Future<bool> createClienta({
     required String nombre,
     required String telefono,

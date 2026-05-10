@@ -1,5 +1,5 @@
 class Clienta {
-  final int idClienta;
+  final String idClienta;
   final String nombre;
   final String telefono;
   final String? alergias;
@@ -19,7 +19,7 @@ class Clienta {
 
   factory Clienta.fromJson(Map<String, dynamic> json) {
     return Clienta(
-      idClienta: _asInt(json['idClienta']),
+      idClienta: (json['idClienta'] ?? '').toString(),
       nombre: (json['nombre'] ?? '').toString(),
       telefono: (json['telefono'] ?? '').toString(),
       alergias: json['alergias']?.toString(),
@@ -27,10 +27,5 @@ class Clienta {
       notas: json['notas']?.toString(),
       ultimaVisita: json['ultimaVisita']?.toString(),
     );
-  }
-
-  static int _asInt(dynamic value) {
-    if (value is int) return value;
-    return int.tryParse(value?.toString() ?? '') ?? 0;
   }
 }

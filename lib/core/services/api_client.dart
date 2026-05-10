@@ -151,6 +151,45 @@ class ApiClient {
     }
   }
 
+  Future<Map<String, dynamic>> eliminarClienta(String id) async {
+    try {
+      final headers = await _authJsonHeaders();
+
+      final response = await http
+          .delete(
+            Uri.parse('${ApiConfig.baseUrl}/clientas/$id'),
+            headers: headers,
+          )
+          .timeout(
+            ApiConfig.connectionTimeout,
+            onTimeout: () => throw Exception('Timeout en conexión'),
+          );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {'success': true, 'data': data};
+      }
+
+      if (response.statusCode == 401) {
+        await _handleUnauthorized();
+        return {
+          'success': false,
+          'statusCode': 401,
+          'error': 'Token inválido o expirado',
+        };
+      }
+
+      final errorData = jsonDecode(response.body);
+      return {
+        'success': false,
+        'statusCode': response.statusCode,
+        'error': errorData['error'] ?? 'No se pudo desactivar la clienta',
+      };
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
   Future<Map<String, dynamic>> createClienta({
     required String nombre,
     required String telefono,
