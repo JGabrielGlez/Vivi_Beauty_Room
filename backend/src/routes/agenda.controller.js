@@ -101,35 +101,6 @@ exports.obtenerCitasSemana = (req, res) => {
   }
 };
 
-// Obtener citas de los 7 días a partir de la fecha de inicio
-exports.obtenerCitasSemana = (req, res) => {
-  const inicio = req.query.inicio;
-  if (!inicio) {
-    return res
-      .status(400)
-      .json({ error: 'Parámetro "inicio" requerido en formato YYYY-MM-DD' });
-  }
-  // Calcular fecha final (7 días)
-  const fechaInicio = new Date(inicio);
-  if (isNaN(fechaInicio.getTime())) {
-    return res
-      .status(400)
-      .json({ error: "Formato de fecha inválido. Use YYYY-MM-DD" });
-  }
-  const fechaFin = new Date(fechaInicio);
-  fechaFin.setDate(fechaFin.getDate() + 7);
-  const yyyyFin = fechaFin.getFullYear();
-  const mmFin = String(fechaFin.getMonth() + 1).padStart(2, "0");
-  const ddFin = String(fechaFin.getDate()).padStart(2, "0");
-  const finStr = `${yyyyFin}-${mmFin}-${ddFin}`;
-  const sql = `SELECT * FROM citas WHERE date(fechaHora) >= ? AND date(fechaHora) < ? ORDER BY fechaHora`;
-  db.all(sql, [inicio, finStr], (err, rows) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    res.json(rows);
-  });
-};
 
 // Obtener detalle de una cita por id
 exports.obtenerCitaPorId = (req, res) => {
