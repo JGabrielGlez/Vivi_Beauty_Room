@@ -151,6 +151,104 @@ class ApiClient {
     }
   }
 
+  Future<Map<String, dynamic>> getServicios() async {
+    try {
+      final headers = await _authJsonHeaders();
+      final response = await http
+          .get(Uri.parse('${ApiConfig.baseUrl}/servicios'), headers: headers)
+          .timeout(ApiConfig.receiveTimeout,
+              onTimeout: () => throw Exception('Timeout en conexión'));
+
+      if (response.statusCode == 200) {
+        final decodedBody = jsonDecode(response.body);
+        final list = decodedBody is List ? decodedBody : <dynamic>[];
+        return {'success': true, 'data': list};
+      }
+      if (response.statusCode == 401) {
+        await _handleUnauthorized();
+        return {'success': false, 'statusCode': 401, 'error': 'Token inválido o expirado'};
+      }
+      final errorData = jsonDecode(response.body);
+      return {
+        'success': false,
+        'statusCode': response.statusCode,
+        'error': errorData['error'] ?? 'Error al cargar servicios',
+      };
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> getCitasSemana(String inicio) async {
+    try {
+      final headers = await _authJsonHeaders();
+      final uri = Uri.parse('${ApiConfig.baseUrl}/agenda/citas/semana')
+          .replace(queryParameters: {'inicio': inicio});
+      final response = await http
+          .get(uri, headers: headers)
+          .timeout(ApiConfig.receiveTimeout,
+              onTimeout: () => throw Exception('Timeout en conexión'));
+
+      if (response.statusCode == 200) {
+        final decodedBody = jsonDecode(response.body);
+        final list = decodedBody is List ? decodedBody : <dynamic>[];
+        return {'success': true, 'data': list};
+      }
+      if (response.statusCode == 401) {
+        await _handleUnauthorized();
+        return {'success': false, 'statusCode': 401, 'error': 'Token inválido o expirado'};
+      }
+      return {'success': false, 'statusCode': response.statusCode, 'error': 'Error al verificar disponibilidad'};
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> crearCita({
+    required String idServicio,
+    required String fechaHora,
+    required int duracion,
+    String? idClienta,
+    double? montoAnticipo,
+    String? notas,
+  }) async {
+    try {
+      final headers = await _authJsonHeaders();
+      final response = await http
+          .post(
+            Uri.parse('${ApiConfig.baseUrl}/agenda/citas'),
+            headers: headers,
+            body: jsonEncode({
+              'idClienta': idClienta,
+              'idServicio': idServicio,
+              'fechaHora': fechaHora,
+              'duracion': duracion,
+              'montoAnticipo': montoAnticipo ?? 0,
+              'anticipoPagado': 0,
+              'notas': notas,
+            }),
+          )
+          .timeout(ApiConfig.connectionTimeout,
+              onTimeout: () => throw Exception('Timeout en conexión'));
+
+      if (response.statusCode == 201) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      }
+      if (response.statusCode == 401) {
+        await _handleUnauthorized();
+        return {'success': false, 'statusCode': 401, 'error': 'Token inválido o expirado'};
+      }
+      final errorData = jsonDecode(response.body);
+      return {
+        'success': false,
+        'statusCode': response.statusCode,
+        'error': errorData['error'] ?? 'Error al guardar la cita',
+      };
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
   Future<Map<String, dynamic>> getClientaDetalle(String id) async {
     try {
       final headers = await _authJsonHeaders();
