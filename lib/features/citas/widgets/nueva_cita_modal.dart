@@ -5,7 +5,6 @@ import 'package:http/http.dart' as http;
 import '../../../shared/models/clienta.dart';
 import '../../../shared/models/servicio.dart';
 import '../../../shared/widgets/primary_button.dart';
-import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/widgets/search_bar_widget.dart';
 
 // URL base del backend. En emulador Android usar 10.0.2.2, en desktop/web usar localhost.
@@ -34,11 +33,11 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
   // Mensaje de error si la petición falla
   String? _errorServicios;
 
-  // Fecha seleccionada en el date picker (inicia en hoy)
-  DateTime _fechaSeleccionada = DateTime.now();
+  // Fecha seleccionada en el date picker (null = no seleccionada)
+  DateTime? _fechaSeleccionada;
 
-  // Hora seleccionada en el time picker (inicia en 10:00 AM)
-  TimeOfDay _horaSeleccionada = const TimeOfDay(hour: 10, minute: 0);
+  // Hora seleccionada en el time picker (null = no seleccionada)
+  TimeOfDay? _horaSeleccionada;
 
   // Mensaje de error si la fecha+hora combinada no es futura
   String? _errorFechaHora;
@@ -46,6 +45,9 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
   // Mensaje de error si la nueva cita se solapa con una existente
   String? _errorSolapamiento;
   bool _verificandoSolapamiento = false;
+
+  final TextEditingController _anticipoController = TextEditingController();
+  String? _errorAnticipo;
 
   // Búsqueda de clientas
   final TextEditingController _busquedaController = TextEditingController();
@@ -62,6 +64,7 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
 
   @override
   void dispose() {
+    _anticipoController.dispose();
     _busquedaController.dispose();
     _debounceTimer?.cancel();
     super.dispose();
@@ -449,7 +452,23 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
                     children: [
                       _buildLabel('COSTO TOTAL'),
                       const SizedBox(height: 8),
-                      const AppTextField(label: '\$ 0.00'),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8F9FA),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFEEEEEE)),
+                        ),
+                        child: Text(
+                          _precioServicio(),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1A1A1A),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -460,7 +479,63 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
                     children: [
                       _buildLabel('ANTICIPO'),
                       const SizedBox(height: 8),
-                      const AppTextField(label: '\$ 0.00'),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: _errorAnticipo != null
+                                ? const Color(0xFFD4748F)
+                                : const Color(0xFFEEEEEE),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Text(
+                              '\$',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey[500],
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: TextField(
+                                controller: _anticipoController,
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                onChanged: _validarAnticipo,
+                                decoration: InputDecoration(
+                                  border: InputBorder.none,
+                                  hintText: '0.00',
+                                  hintStyle: TextStyle(color: Colors.grey[400]),
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                ),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF1A1A1A),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (_errorAnticipo != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            _errorAnticipo!,
+                            style: const TextStyle(
+                              color: Color(0xFFD4748F),
+                              fontSize: 11,
+                              fontFamily: 'Poppins',
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -542,19 +617,23 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
 
   // Consulta las citas del día seleccionado y detecta si la nueva cita se solapa
   Future<void> _verificarSolapamiento() async {
-    if (_servicioSeleccionadoId == null || _errorFechaHora != null) {
+    if (_servicioSeleccionadoId == null ||
+        _errorFechaHora != null ||
+        _fechaSeleccionada == null ||
+        _horaSeleccionada == null) {
       setState(() => _errorSolapamiento = null);
       return;
     }
 
     final servicio = _servicios.firstWhere((s) => s.id == _servicioSeleccionadoId);
-    final fecha = _fechaSeleccionada;
+    final fecha = _fechaSeleccionada!;
+    final hora = _horaSeleccionada!;
     final inicioStr =
         '${fecha.year}-${fecha.month.toString().padLeft(2, '0')}-${fecha.day.toString().padLeft(2, '0')}';
 
     final newStart = DateTime(
       fecha.year, fecha.month, fecha.day,
-      _horaSeleccionada.hour, _horaSeleccionada.minute,
+      hora.hour, hora.minute,
     );
     // Fin = duración del servicio + tiempo extra + 30 min de buffer
     final newEnd = newStart.add(Duration(minutes: servicio.duracionMin + _tiempoExtra + 30));
@@ -668,6 +747,33 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
     }
   }
 
+  void _validarAnticipo(String value) {
+    final anticipo = double.tryParse(value);
+    if (_servicioSeleccionadoId == null) {
+      setState(() => _errorAnticipo = null);
+      return;
+    }
+    final s = _servicios.firstWhere((s) => s.id == _servicioSeleccionadoId);
+    if (anticipo == null || anticipo < 0) {
+      setState(() => _errorAnticipo = 'Monto inválido');
+    } else if (anticipo > s.precio) {
+      setState(() => _errorAnticipo = 'No puede superar \$${s.precio.toStringAsFixed(2)}');
+    } else {
+      setState(() => _errorAnticipo = null);
+    }
+  }
+
+  // Retorna el precio del servicio seleccionado formateado, o '--' si no hay ninguno
+  String _precioServicio() {
+    if (_servicioSeleccionadoId == null) return '\$ --';
+    try {
+      final s = _servicios.firstWhere((s) => s.id == _servicioSeleccionadoId);
+      return '\$${s.precio.toStringAsFixed(2)}';
+    } catch (_) {
+      return '\$ --';
+    }
+  }
+
   // Valida que la combinación de fecha + hora sea futura y actualiza el error
   void _validarFechaHora(DateTime fecha, TimeOfDay hora) {
     final dt = DateTime(fecha.year, fecha.month, fecha.day, hora.hour, hora.minute);
@@ -678,17 +784,18 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
 
   // Campo de fecha que abre el date picker nativo de Flutter al tocarlo
   Widget _buildFechaPicker() {
-    final texto =
-        '${_fechaSeleccionada.day.toString().padLeft(2, '0')} '
-        '${_mesCorto(_fechaSeleccionada.month)} '
-        '${_fechaSeleccionada.year}';
+    final texto = _fechaSeleccionada == null
+        ? '-- --- ----'
+        : '${_fechaSeleccionada!.day.toString().padLeft(2, '0')} '
+          '${_mesCorto(_fechaSeleccionada!.month)} '
+          '${_fechaSeleccionada!.year}';
     final hayError = _errorFechaHora != null;
 
     return GestureDetector(
       onTap: () async {
         final picked = await showDatePicker(
           context: context,
-          initialDate: _fechaSeleccionada,
+          initialDate: _fechaSeleccionada ?? DateTime.now(),
           firstDate: DateTime.now(),
           lastDate: DateTime.now().add(const Duration(days: 365)),
           builder: (context, child) => Theme(
@@ -705,7 +812,9 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
         if (picked != null) {
           setState(() {
             _fechaSeleccionada = picked;
-            _validarFechaHora(picked, _horaSeleccionada);
+            if (_horaSeleccionada != null) {
+              _validarFechaHora(picked, _horaSeleccionada!);
+            }
           });
           _verificarSolapamiento();
         }
@@ -738,17 +847,24 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
   // Campo de hora que abre un dialog propio con incrementadores.
   // Los minutos solo alternan entre 00 y 30.
   Widget _buildHoraPicker() {
-    final h = _horaSeleccionada.hourOfPeriod;
-    final hora = (h == 0 ? 12 : h).toString().padLeft(2, '0');
-    final minuto = _horaSeleccionada.minute.toString().padLeft(2, '0');
-    final periodo = _horaSeleccionada.period == DayPeriod.am ? 'AM' : 'PM';
+    final String textoHora;
+    if (_horaSeleccionada == null) {
+      textoHora = '--:-- --';
+    } else {
+      final h = _horaSeleccionada!.hourOfPeriod;
+      final hora = (h == 0 ? 12 : h).toString().padLeft(2, '0');
+      final minuto = _horaSeleccionada!.minute.toString().padLeft(2, '0');
+      final periodo = _horaSeleccionada!.period == DayPeriod.am ? 'AM' : 'PM';
+      textoHora = '$hora:$minuto $periodo';
+    }
     final hayError = _errorFechaHora != null;
 
     return GestureDetector(
       onTap: () async {
-        int dialogHour = _horaSeleccionada.hourOfPeriod == 0 ? 12 : _horaSeleccionada.hourOfPeriod;
-        int dialogMinute = _horaSeleccionada.minute >= 30 ? 30 : 0;
-        DayPeriod dialogPeriod = _horaSeleccionada.period;
+        final base = _horaSeleccionada;
+        int dialogHour = base == null ? 10 : (base.hourOfPeriod == 0 ? 12 : base.hourOfPeriod);
+        int dialogMinute = base == null ? 0 : (base.minute >= 30 ? 30 : 0);
+        DayPeriod dialogPeriod = base?.period ?? DayPeriod.am;
 
         final result = await showDialog<TimeOfDay>(
           context: context,
@@ -835,7 +951,9 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
         if (result != null) {
           setState(() {
             _horaSeleccionada = result;
-            _validarFechaHora(_fechaSeleccionada, result);
+            if (_fechaSeleccionada != null) {
+              _validarFechaHora(_fechaSeleccionada!, result);
+            }
           });
           _verificarSolapamiento();
         }
@@ -856,7 +974,7 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
                 size: 18, color: hayError ? Colors.red : const Color(0xFFD4748F)),
             const SizedBox(width: 10),
             Text(
-              '$hora:$minuto $periodo',
+              textoHora,
               style: TextStyle(fontSize: 14, color: hayError ? Colors.red : const Color(0xFF1A1A1A)),
             ),
           ],
