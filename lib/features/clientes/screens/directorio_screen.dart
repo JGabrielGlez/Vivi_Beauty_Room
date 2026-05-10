@@ -1,19 +1,46 @@
 import 'package:flutter/material.dart';
-import '../../../../shared/widgets/app_bottom_nav_bar.dart';
+import 'package:provider/provider.dart';
+import 'package:vivi_room/core/services/api_client.dart';
+import 'package:vivi_room/features/clientes/models/clienta_model.dart';
+import 'package:vivi_room/features/clientes/providers/clientas_provider.dart';
+import 'package:vivi_room/features/clientes/widgets/nueva_clienta_modal.dart';
 import '../../../../shared/widgets/cliente_avatar.dart';
 import '../../../../shared/widgets/search_bar_widget.dart';
 import '../../../../shared/widgets/fab_button.dart';
 
 // Pantalla principal del directorio de clientas - Rocío
-class DirectorioScreen extends StatefulWidget {
+class DirectorioScreen extends StatelessWidget {
   const DirectorioScreen({super.key});
 
   @override
-  State<DirectorioScreen> createState() => _DirectorioScreenState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider<ClientasProvider>(
+      create: (context) =>
+          ClientasProvider(apiClient: context.read<ApiClient>())
+            ..fetchClientas(),
+      child: const _DirectorioScreenView(),
+    );
+  }
 }
 
-class _DirectorioScreenState extends State<DirectorioScreen> {
+class _DirectorioScreenView extends StatefulWidget {
+  const _DirectorioScreenView();
+
+  @override
+  State<_DirectorioScreenView> createState() => _DirectorioScreenViewState();
+}
+
+class _DirectorioScreenViewState extends State<_DirectorioScreenView> {
   final _searchController = TextEditingController();
+
+  Future<void> _openNuevaClientaModal() async {
+    await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const NuevaClientaModal(),
+    );
+  }
 
   @override
   void dispose() {
@@ -23,10 +50,15 @@ class _DirectorioScreenState extends State<DirectorioScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final provider = context.watch<ClientasProvider>();
+    final filtered = provider.filteredClientas;
+    final recientes = filtered.take(2).toList();
+    final todas = filtered.skip(recientes.length).toList();
+
     return Scaffold(
       backgroundColor: const Color(0xFFFAF8F8),
       // Botón flotante para agregar una nueva clienta
-      floatingActionButton: FabButton(onPressed: () {}),
+      floatingActionButton: FabButton(onPressed: _openNuevaClientaModal),
       body: Column(
         children: [
           // Encabezado rosado con el título de la pantalla
@@ -66,59 +98,95 @@ class _DirectorioScreenState extends State<DirectorioScreen> {
                     SearchBarWidget(
                       controller: _searchController,
                       hintText: 'Buscar clienta...',
+                      onChanged: provider.setSearchQuery,
                     ),
 
                     const SizedBox(height: 16),
 
                     // Lista de clientas dividida por secciones
-                    Expanded(
-                      child: ListView(
-                        padding: EdgeInsets.zero,
-                        children: [
-                          // Clientas vistas recientemente
-                          const _SectionLabel('RECIENTES'),
-                          const SizedBox(height: 8),
-                          const _ClienteRow(
-                            nombre: 'Sofía Ramírez',
-                            info: '14 ene · Pestañas clásicas',
-                          ),
-                          const _ClienteRow(
-                            nombre: 'Mariana Lopez',
-                            info: '2 feb · Maquillaje social',
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          // Todas las clientas registradas
-                          const _SectionLabel('TODAS'),
-                          const SizedBox(height: 8),
-                          const _ClienteRow(
-                            nombre: 'Daniela Morales',
-                            info: '8 ene · Laminado de cejas',
-                          ),
-                          const _ClienteRow(
-                            nombre: 'Janeth Lopez',
-                            info: '2 feb · Maquillaje social',
-                          ),
-                          const _ClienteRow(
-                            nombre: 'Sofía Ramírez',
-                            info: '14 ene · Pestañas clásicas',
-                          ),
-
-                          const SizedBox(height: 16),
-                        ],
-                      ),
-                    ),
+                    Expanded(child: _buildBody(provider, recientes, todas)),
                   ],
                 ),
               ),
             ),
           ),
-
-        
         ],
       ),
     );
+  }
+
+  Widget _buildBody(
+    ClientasProvider provider,
+    List<Clienta> recientes,
+    List<Clienta> todas,
+  ) {
+    if (provider.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    final hasData = recientes.isNotEmpty || todas.isNotEmpty;
+
+    if (!hasData) {
+      final message = provider.searchQuery.trim().isNotEmpty
+          ? 'No se encontraron clientas con ese filtro'
+          : 'Aun no hay clientas registradas';
+
+      return Center(
+        child: Text(
+          message,
+          style: const TextStyle(color: Color(0xFF888888), fontSize: 14),
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () => provider.fetchClientas(),
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          if (provider.errorMessage != null) ...[
+            Text(
+              provider.errorMessage!,
+              style: const TextStyle(
+                color: Color(0xFFD4748F),
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+          if (recientes.isNotEmpty) ...[
+            const _SectionLabel('RECIENTES'),
+            const SizedBox(height: 8),
+            ...recientes.map(
+              (clienta) => _ClienteRow(
+                nombre: clienta.nombre,
+                info: _clientaInfo(clienta),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+          if (todas.isNotEmpty) ...[
+            const _SectionLabel('TODAS'),
+            const SizedBox(height: 8),
+            ...todas.map(
+              (clienta) => _ClienteRow(
+                nombre: clienta.nombre,
+                info: _clientaInfo(clienta),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _clientaInfo(Clienta clienta) {
+    if (clienta.ultimaVisita == null || clienta.ultimaVisita!.isEmpty) {
+      return 'Sin citas completadas';
+    }
+    return 'Ultima visita: ${clienta.ultimaVisita}';
   }
 }
 
