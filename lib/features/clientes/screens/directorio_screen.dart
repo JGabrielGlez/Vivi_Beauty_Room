@@ -73,7 +73,7 @@ class _DirectorioScreenViewState extends State<_DirectorioScreenView> {
               : 'Error al desactivar la clienta.',
         ),
         backgroundColor:
-            exito ? const Color(0xFF4CAF50) : const Color(0xFFD4748F),
+            exito ? const Color(0xFFE8A0B4) : const Color(0xFFD4748F),
       ),
     );
   }
@@ -81,7 +81,7 @@ class _DirectorioScreenViewState extends State<_DirectorioScreenView> {
   Future<void> _openNuevaClientaModal() async {
     final clientasProvider = context.read<ClientasProvider>();
 
-    await showModalBottomSheet<bool>(
+    final creada = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -90,6 +90,15 @@ class _DirectorioScreenViewState extends State<_DirectorioScreenView> {
         child: const NuevaClientaModal(),
       ),
     );
+
+    if (creada == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Clienta registrada correctamente.'),
+          backgroundColor: Color(0xFFE8A0B4),
+        ),
+      );
+    }
   }
 
   @override

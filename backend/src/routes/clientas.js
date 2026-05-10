@@ -98,13 +98,13 @@ router.post("/", (req, res) => {
   }
 
   const existente = db
-    .prepare("SELECT * FROM clientas WHERE telefono = ?")
+    .prepare("SELECT * FROM clientas WHERE telefono = ? AND eliminada = 0")
     .get(telefono);
 
   if (existente) {
     return res
       .status(400)
-      .json({ error: "Ya existe una clienta con ese teléfono" });
+      .json({ error: "Ya existe una clienta activa con ese teléfono" });
   }
 
   const result = db
