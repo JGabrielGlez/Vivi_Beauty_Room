@@ -37,6 +37,9 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
   // Fecha seleccionada en el date picker (inicia en hoy)
   DateTime _fechaSeleccionada = DateTime.now();
 
+  // Hora seleccionada en el time picker (inicia en 10:00 AM)
+  TimeOfDay _horaSeleccionada = const TimeOfDay(hour: 10, minute: 0);
+
   // Búsqueda de clientas
   final TextEditingController _busquedaController = TextEditingController();
   List<Clienta> _resultadosBusqueda = [];
@@ -306,7 +309,7 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
                     children: [
                       _buildLabel('HORARIO'),
                       const SizedBox(height: 8),
-                      const AppTextField(label: '10:00 AM'),
+                      _buildHoraPicker(),
                     ],
                   ),
                 ),
@@ -481,6 +484,54 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
             const SizedBox(width: 10),
             Text(
               texto,
+              style: const TextStyle(fontSize: 14, color: Color(0xFF1A1A1A)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Campo de hora que abre el time picker nativo de Flutter al tocarlo
+  Widget _buildHoraPicker() {
+    final hora = _horaSeleccionada.hour.toString().padLeft(2, '0');
+    final minuto = _horaSeleccionada.minute.toString().padLeft(2, '0');
+    final periodo = _horaSeleccionada.hour < 12 ? 'AM' : 'PM';
+
+    return GestureDetector(
+      onTap: () async {
+        final picked = await showTimePicker(
+          context: context,
+          initialTime: _horaSeleccionada,
+          builder: (context, child) => Theme(
+            data: Theme.of(context).copyWith(
+              colorScheme: const ColorScheme.light(
+                primary: Color(0xFFD4748F),
+                onPrimary: Colors.white,
+                surface: Colors.white,
+              ),
+            ),
+            child: child!,
+          ),
+        );
+        if (picked != null) {
+          setState(() => _horaSeleccionada = picked);
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFCCCCCC), width: 1.5),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.access_time_outlined,
+                size: 18, color: Color(0xFFD4748F)),
+            const SizedBox(width: 10),
+            Text(
+              '$hora:$minuto $periodo',
               style: const TextStyle(fontSize: 14, color: Color(0xFF1A1A1A)),
             ),
           ],
