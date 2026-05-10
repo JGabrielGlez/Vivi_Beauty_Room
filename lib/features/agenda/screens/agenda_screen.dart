@@ -154,7 +154,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
                       } else if (value == 'info') {
                         showDialog(
                           context: context,
-                          builder: (_) => AlertDialog(
+                          builder: (ctx) => AlertDialog(
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
                             ),
@@ -164,7 +164,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
                             ),
                             actions: [
                               TextButton(
-                                onPressed: () => Navigator.of(context).pop(),
+                                onPressed: () => Navigator.of(ctx).pop(),
                                 child: const Text(
                                   'Cerrar',
                                   style: TextStyle(color: Color(0xFFD4748F)),
@@ -174,9 +174,10 @@ class _AgendaScreenState extends State<AgendaScreen> {
                           ),
                         );
                       } else if (value == 'logout') {
+                        final authProvider = context.read<AuthProvider>();
                         showDialog(
                           context: context,
-                          builder: (_) => AlertDialog(
+                          builder: (ctx) => AlertDialog(
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
                             ),
@@ -186,13 +187,13 @@ class _AgendaScreenState extends State<AgendaScreen> {
                             ),
                             actions: [
                               TextButton(
-                                onPressed: () => Navigator.of(context).pop(),
+                                onPressed: () => Navigator.of(ctx).pop(),
                                 child: const Text('Cancelar'),
                               ),
                               TextButton(
                                 onPressed: () {
-                                  Navigator.of(context).pop();
-                                  context.read<AuthProvider>().signOut();
+                                  Navigator.of(ctx).pop();
+                                  authProvider.signOut();
                                 },
                                 child: const Text(
                                   'Cerrar sesión',
