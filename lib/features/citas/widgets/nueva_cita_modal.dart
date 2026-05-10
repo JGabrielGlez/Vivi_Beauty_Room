@@ -40,6 +40,9 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
   // Hora seleccionada en el time picker (inicia en 10:00 AM)
   TimeOfDay _horaSeleccionada = const TimeOfDay(hour: 10, minute: 0);
 
+  // Mensaje de error si la fecha+hora combinada no es futura
+  String? _errorFechaHora;
+
   // Búsqueda de clientas
   final TextEditingController _busquedaController = TextEditingController();
   List<Clienta> _resultadosBusqueda = [];
@@ -315,6 +318,15 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
                 ),
               ],
             ),
+            // Error si la fecha+hora seleccionada es pasada
+            if (_errorFechaHora != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  _errorFechaHora!,
+                  style: const TextStyle(color: Colors.red, fontSize: 12),
+                ),
+              ),
             const SizedBox(height: 20),
 
             // Selector de duración
@@ -441,12 +453,21 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
     duracionSeleccionada = '$cercano MIN';
   }
 
+  // Valida que la combinación de fecha + hora sea futura y actualiza el error
+  void _validarFechaHora(DateTime fecha, TimeOfDay hora) {
+    final dt = DateTime(fecha.year, fecha.month, fecha.day, hora.hour, hora.minute);
+    _errorFechaHora = dt.isAfter(DateTime.now())
+        ? null
+        : 'La fecha y hora deben ser en el futuro';
+  }
+
   // Campo de fecha que abre el date picker nativo de Flutter al tocarlo
   Widget _buildFechaPicker() {
     final texto =
         '${_fechaSeleccionada.day.toString().padLeft(2, '0')} '
         '${_mesCorto(_fechaSeleccionada.month)} '
         '${_fechaSeleccionada.year}';
+    final hayError = _errorFechaHora != null;
 
     return GestureDetector(
       onTap: () async {
@@ -467,7 +488,10 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
           ),
         );
         if (picked != null) {
-          setState(() => _fechaSeleccionada = picked);
+          setState(() {
+            _fechaSeleccionada = picked;
+            _validarFechaHora(picked, _horaSeleccionada);
+          });
         }
       },
       child: Container(
@@ -475,16 +499,19 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFCCCCCC), width: 1.5),
+          border: Border.all(
+            color: hayError ? Colors.red : const Color(0xFFCCCCCC),
+            width: 1.5,
+          ),
         ),
         child: Row(
           children: [
-            const Icon(Icons.calendar_today_outlined,
-                size: 18, color: Color(0xFFD4748F)),
+            Icon(Icons.calendar_today_outlined,
+                size: 18, color: hayError ? Colors.red : const Color(0xFFD4748F)),
             const SizedBox(width: 10),
             Text(
               texto,
-              style: const TextStyle(fontSize: 14, color: Color(0xFF1A1A1A)),
+              style: TextStyle(fontSize: 14, color: hayError ? Colors.red : const Color(0xFF1A1A1A)),
             ),
           ],
         ),
@@ -492,30 +519,108 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
     );
   }
 
-  // Campo de hora que abre el time picker nativo de Flutter al tocarlo
+  // Campo de hora que abre un dialog propio con incrementadores.
+  // Los minutos solo alternan entre 00 y 30.
   Widget _buildHoraPicker() {
-    final hora = _horaSeleccionada.hour.toString().padLeft(2, '0');
+    final h = _horaSeleccionada.hourOfPeriod;
+    final hora = (h == 0 ? 12 : h).toString().padLeft(2, '0');
     final minuto = _horaSeleccionada.minute.toString().padLeft(2, '0');
-    final periodo = _horaSeleccionada.hour < 12 ? 'AM' : 'PM';
+    final periodo = _horaSeleccionada.period == DayPeriod.am ? 'AM' : 'PM';
+    final hayError = _errorFechaHora != null;
 
     return GestureDetector(
       onTap: () async {
-        final picked = await showTimePicker(
+        int dialogHour = _horaSeleccionada.hourOfPeriod == 0 ? 12 : _horaSeleccionada.hourOfPeriod;
+        int dialogMinute = _horaSeleccionada.minute >= 30 ? 30 : 0;
+        DayPeriod dialogPeriod = _horaSeleccionada.period;
+
+        final result = await showDialog<TimeOfDay>(
           context: context,
-          initialTime: _horaSeleccionada,
-          builder: (context, child) => Theme(
-            data: Theme.of(context).copyWith(
-              colorScheme: const ColorScheme.light(
-                primary: Color(0xFFD4748F),
-                onPrimary: Colors.white,
-                surface: Colors.white,
-              ),
-            ),
-            child: child!,
+          builder: (context) => StatefulBuilder(
+            builder: (context, setDialogState) {
+              return AlertDialog(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                title: const Text(
+                  'Seleccionar hora',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                ),
+                content: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Horas
+                    _buildTimeUnit(
+                      value: dialogHour.toString().padLeft(2, '0'),
+                      onUp: () => setDialogState(() {
+                        dialogHour = dialogHour >= 12 ? 1 : dialogHour + 1;
+                      }),
+                      onDown: () => setDialogState(() {
+                        dialogHour = dialogHour <= 1 ? 12 : dialogHour - 1;
+                      }),
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 6),
+                      child: Text(':', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+                    ),
+                    // Minutos — solo 00 o 30
+                    _buildTimeUnit(
+                      value: dialogMinute == 0 ? '00' : '30',
+                      onUp: () => setDialogState(() => dialogMinute = dialogMinute == 0 ? 30 : 0),
+                      onDown: () => setDialogState(() => dialogMinute = dialogMinute == 0 ? 30 : 0),
+                    ),
+                    const SizedBox(width: 12),
+                    // AM / PM
+                    GestureDetector(
+                      onTap: () => setDialogState(() {
+                        dialogPeriod = dialogPeriod == DayPeriod.am ? DayPeriod.pm : DayPeriod.am;
+                      }),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFD4748F),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          dialogPeriod == DayPeriod.am ? 'AM' : 'PM',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text('Cancelar', style: TextStyle(color: Colors.grey[600])),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      final hour24 = (dialogHour % 12) + (dialogPeriod == DayPeriod.pm ? 12 : 0);
+                      Navigator.pop(context, TimeOfDay(hour: hour24, minute: dialogMinute));
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFD4748F),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    child: const Text('Aceptar'),
+                  ),
+                ],
+              );
+            },
           ),
         );
-        if (picked != null) {
-          setState(() => _horaSeleccionada = picked);
+
+        if (result != null) {
+          setState(() {
+            _horaSeleccionada = result;
+            _validarFechaHora(_fechaSeleccionada, result);
+          });
         }
       },
       child: Container(
@@ -523,20 +628,65 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFCCCCCC), width: 1.5),
+          border: Border.all(
+            color: hayError ? Colors.red : const Color(0xFFCCCCCC),
+            width: 1.5,
+          ),
         ),
         child: Row(
           children: [
-            const Icon(Icons.access_time_outlined,
-                size: 18, color: Color(0xFFD4748F)),
+            Icon(Icons.access_time_outlined,
+                size: 18, color: hayError ? Colors.red : const Color(0xFFD4748F)),
             const SizedBox(width: 10),
             Text(
               '$hora:$minuto $periodo',
-              style: const TextStyle(fontSize: 14, color: Color(0xFF1A1A1A)),
+              style: TextStyle(fontSize: 14, color: hayError ? Colors.red : const Color(0xFF1A1A1A)),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  // Columna con flechas arriba/abajo y el valor numérico en el centro
+  Widget _buildTimeUnit({
+    required String value,
+    required VoidCallback onUp,
+    required VoidCallback onDown,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          onPressed: onUp,
+          icon: const Icon(Icons.keyboard_arrow_up, color: Color(0xFFD4748F), size: 30),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(),
+        ),
+        Container(
+          width: 58,
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            border: Border.all(color: const Color(0xFFD4748F), width: 1.5),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            value,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1A1A1A),
+            ),
+          ),
+        ),
+        IconButton(
+          onPressed: onDown,
+          icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFFD4748F), size: 30),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(),
+        ),
+      ],
     );
   }
 
