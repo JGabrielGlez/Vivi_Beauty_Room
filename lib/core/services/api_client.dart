@@ -385,6 +385,42 @@ class ApiClient {
     }
   }
 
+  Future<Map<String, dynamic>> changePassword({
+    required String passwordActual,
+    required String passwordNueva,
+  }) async {
+    try {
+      final headers = await _authJsonHeaders();
+      final response = await http
+          .put(
+            Uri.parse('${ApiConfig.baseUrl}/auth/change-password'),
+            headers: headers,
+            body: jsonEncode({
+              'passwordActual': passwordActual,
+              'passwordNueva': passwordNueva,
+            }),
+          )
+          .timeout(ApiConfig.connectionTimeout,
+              onTimeout: () => throw Exception('Timeout en conexión'));
+
+      if (response.statusCode == 200) {
+        return {'success': true};
+      }
+      if (response.statusCode == 401) {
+        await _handleUnauthorized();
+        return {'success': false, 'statusCode': 401, 'error': 'Token inválido o expirado'};
+      }
+      final errorData = jsonDecode(response.body);
+      return {
+        'success': false,
+        'statusCode': response.statusCode,
+        'error': errorData['error'] ?? 'No se pudo cambiar la contraseña',
+      };
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
   Future<Map<String, dynamic>> createClienta({
     required String nombre,
     required String telefono,

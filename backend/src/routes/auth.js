@@ -61,4 +61,36 @@ router.get("/me", authMiddleware, (req, res) => {
   return res.json(usuario);
 });
 
+// PUT /api/auth/change-password
+router.put("/change-password", authMiddleware, (req, res) => {
+  const { passwordActual, passwordNueva } = req.body;
+
+  if (!passwordActual || !passwordNueva) {
+    return res.status(400).json({ error: "Contraseña actual y nueva son requeridas" });
+  }
+
+  if (passwordNueva.length < 6) {
+    return res.status(400).json({ error: "La nueva contraseña debe tener al menos 6 caracteres" });
+  }
+
+  const usuario = db
+    .prepare("SELECT * FROM usuarios WHERE idUsuario = ?")
+    .get(req.user.idUsuario);
+
+  if (!usuario) {
+    return res.status(404).json({ error: "Usuario no encontrado" });
+  }
+
+  const valida = bcrypt.compareSync(passwordActual, usuario.passwordHash);
+  if (!valida) {
+    return res.status(400).json({ error: "La contraseña actual es incorrecta" });
+  }
+
+  const nuevoHash = bcrypt.hashSync(passwordNueva, 10);
+  db.prepare("UPDATE usuarios SET passwordHash = ? WHERE idUsuario = ?")
+    .run(nuevoHash, req.user.idUsuario);
+
+  return res.json({ mensaje: "Contraseña actualizada correctamente" });
+});
+
 module.exports = router;

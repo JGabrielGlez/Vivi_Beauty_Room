@@ -96,9 +96,9 @@ class AuthProvider extends ChangeNotifier {
         notifyListeners();
         return false;
       }
-    } catch (e) {
+    } catch (_) {
       _state = AuthState.error;
-      _errorMessage = e.toString();
+      _errorMessage = 'Servicio no disponible. Inténtalo más tarde.';
       notifyListeners();
       return false;
     }

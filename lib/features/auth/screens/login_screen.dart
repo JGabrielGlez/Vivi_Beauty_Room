@@ -203,33 +203,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       onPressed: authProvider.isLoading ? () {} : _handleLogin,
                     ),
 
-                    const SizedBox(height: 20),
-
-                    // Link de registro
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text(
-                          '¿No tienes una cuenta? ',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF888888),
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () {},
-                          child: const Text(
-                            'Regístrate',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFFD4748F),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
                     const SizedBox(height: 40),
                   ],
                 );
