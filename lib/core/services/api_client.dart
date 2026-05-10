@@ -151,6 +151,103 @@ class ApiClient {
     }
   }
 
+  Future<Map<String, dynamic>> getClientaDetalle(String id) async {
+    try {
+      final headers = await _authJsonHeaders();
+      final response = await http
+          .get(Uri.parse('${ApiConfig.baseUrl}/clientas/$id'), headers: headers)
+          .timeout(ApiConfig.receiveTimeout,
+              onTimeout: () => throw Exception('Timeout en conexión'));
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      }
+      if (response.statusCode == 401) {
+        await _handleUnauthorized();
+        return {'success': false, 'statusCode': 401, 'error': 'Token inválido o expirado'};
+      }
+      final errorData = jsonDecode(response.body);
+      return {
+        'success': false,
+        'statusCode': response.statusCode,
+        'error': errorData['error'] ?? 'Error al cargar la clienta',
+      };
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> getClientaHistorial(String id) async {
+    try {
+      final headers = await _authJsonHeaders();
+      final response = await http
+          .get(Uri.parse('${ApiConfig.baseUrl}/clientas/$id/historial'), headers: headers)
+          .timeout(ApiConfig.receiveTimeout,
+              onTimeout: () => throw Exception('Timeout en conexión'));
+
+      if (response.statusCode == 200) {
+        final decodedBody = jsonDecode(response.body);
+        final list = decodedBody is List ? decodedBody : <dynamic>[];
+        return {'success': true, 'data': list};
+      }
+      if (response.statusCode == 401) {
+        await _handleUnauthorized();
+        return {'success': false, 'statusCode': 401, 'error': 'Token inválido o expirado'};
+      }
+      final errorData = jsonDecode(response.body);
+      return {
+        'success': false,
+        'statusCode': response.statusCode,
+        'error': errorData['error'] ?? 'Error al cargar el historial',
+      };
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> updateClienta(
+    String id, {
+    required String nombre,
+    required String telefono,
+    String? alergias,
+    String? preferencias,
+    String? notas,
+  }) async {
+    try {
+      final headers = await _authJsonHeaders();
+      final response = await http
+          .put(
+            Uri.parse('${ApiConfig.baseUrl}/clientas/$id'),
+            headers: headers,
+            body: jsonEncode({
+              'nombre': nombre,
+              'telefono': telefono,
+              'alergias': alergias,
+              'preferencias': preferencias,
+              'notas': notas,
+            }),
+          )
+          .timeout(ApiConfig.connectionTimeout,
+              onTimeout: () => throw Exception('Timeout en conexión'));
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      }
+      if (response.statusCode == 401) {
+        await _handleUnauthorized();
+        return {'success': false, 'statusCode': 401, 'error': 'Token inválido o expirado'};
+      }
+      final errorData = jsonDecode(response.body);
+      return {
+        'success': false,
+        'statusCode': response.statusCode,
+        'error': errorData['error'] ?? 'No se pudo actualizar la clienta',
+      };
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
   Future<Map<String, dynamic>> eliminarClienta(String id) async {
     try {
       final headers = await _authJsonHeaders();

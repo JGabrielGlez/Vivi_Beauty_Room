@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:vivi_room/core/services/api_client.dart';
 import 'package:vivi_room/features/clientes/models/clienta_model.dart';
 import 'package:vivi_room/features/clientes/providers/clientas_provider.dart';
+import 'package:vivi_room/features/clientes/screens/detalle_clienta_screen.dart';
 import 'package:vivi_room/features/clientes/widgets/nueva_clienta_modal.dart';
 import '../../../../shared/widgets/cliente_avatar.dart';
 import '../../../../shared/widgets/search_bar_widget.dart';
@@ -32,6 +33,17 @@ class _DirectorioScreenView extends StatefulWidget {
 
 class _DirectorioScreenViewState extends State<_DirectorioScreenView> {
   final _searchController = TextEditingController();
+
+  Future<void> _abrirDetalle(Clienta clienta) async {
+    final editada = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => DetalleClientaScreen(clienta: clienta),
+      ),
+    );
+    if (editada == true && mounted) {
+      context.read<ClientasProvider>().fetchClientas();
+    }
+  }
 
   Future<void> _confirmarEliminacion(Clienta clienta) async {
     final provider = context.read<ClientasProvider>();
@@ -222,6 +234,7 @@ class _DirectorioScreenViewState extends State<_DirectorioScreenView> {
                 clienta: clienta,
                 info: _clientaInfo(clienta),
                 onEliminar: () => _confirmarEliminacion(clienta),
+                onTap: () => _abrirDetalle(clienta),
               ),
             ),
             const SizedBox(height: 16),
@@ -234,6 +247,7 @@ class _DirectorioScreenViewState extends State<_DirectorioScreenView> {
                 clienta: clienta,
                 info: _clientaInfo(clienta),
                 onEliminar: () => _confirmarEliminacion(clienta),
+                onTap: () => _abrirDetalle(clienta),
               ),
             ),
             const SizedBox(height: 16),
@@ -278,62 +292,70 @@ class _ClienteRow extends StatelessWidget {
     required this.clienta,
     required this.info,
     required this.onEliminar,
+    required this.onTap,
   });
   final Clienta clienta;
   final String info;
   final VoidCallback onEliminar;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 4,
             offset: const Offset(0, 1),
           ),
         ],
       ),
-      child: Row(
-        children: [
-          ClienteAvatar(nombre: clienta.nombre),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  clienta.nombre,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                    color: Color(0xFF1A1A1A),
-                  ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              ClienteAvatar(nombre: clienta.nombre),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      clienta.nombre,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: Color(0xFF1A1A1A),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      info,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF888888),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  info,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF888888),
-                  ),
-                ),
-              ],
-            ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline, color: Color(0xFFD4748F), size: 20),
+                onPressed: onEliminar,
+                tooltip: 'Desactivar clienta',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ],
           ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline, color: Color(0xFFD4748F), size: 20),
-            onPressed: onEliminar,
-            tooltip: 'Desactivar clienta',
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-          ),
-        ],
+        ),
       ),
     );
   }
