@@ -14,11 +14,13 @@ const {
   seedClientas,
   seedServicios,
   seedCitasAgenda,
+  seedCitasHoy2026,
 } = require("./src/db/seed");
 seedClientas();
 seedUsuarios();
 seedCitasAgenda();
 seedServicios();
+seedCitasHoy2026();
 // Middleware de autenticación global (aplica a todas las rutas excepto login)
 const authMiddleware = require("./src/middleware/auth");
 
@@ -26,11 +28,15 @@ const authMiddleware = require("./src/middleware/auth");
 const authRoutes = require("./src/routes/auth");
 app.use("/api/auth", authRoutes);
 
+
 // Rutas protegidas (con auth)
- app.use("/api/agenda", authMiddleware, require("./src/routes/agenda"));
-// app.use('/api/citas',     authMiddleware, require('./src/routes/citas'));
+app.use("/api/agenda", require("./src/routes/agenda"));
 app.use("/api/servicios", authMiddleware, require("./src/routes/servicios"));
 app.use("/api/clientas", authMiddleware, require("./src/routes/clientas"));
+
+// --- PRUEBAS (descomentar para desarrollo sin auth) ---
+// app.use("/api/servicios", require("./src/routes/servicios"));
+// app.use("/api/clientas", require("./src/routes/clientas"));
 
 
 

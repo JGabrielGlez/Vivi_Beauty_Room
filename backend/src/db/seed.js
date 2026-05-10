@@ -289,4 +289,62 @@ function seedCitasAgenda() {
   }
 }
 
-module.exports = { seedUsuarios, seedClientas, seedServicios, seedCitasAgenda };
+// Citas de prueba para hoy (2026-05-10) — para probar solapamiento en el modal
+function seedCitasHoy2026() {
+  const existe = db.prepare("SELECT * FROM citas WHERE fechaHora LIKE '2026-05-10%' LIMIT 1").get();
+  if (existe) return;
+
+  const clientas = db.prepare('SELECT idClienta FROM clientas').all();
+  const servicios = db.prepare('SELECT idServicio, duracionMin FROM servicios WHERE activo = 1').all();
+
+  if (clientas.length === 0 || servicios.length === 0) return;
+
+  // 10:00 → servicio 60min + 30 buffer = ocupa hasta 11:30
+  // 13:00 → servicio 90min + 30 buffer = ocupa hasta 14:30 (novia)
+  // 16:00 → servicio 30min + 30 buffer = ocupa hasta 17:00 (cejas)
+  const citas = [
+    {
+      idClienta: clientas[0].idClienta,
+      idServicio: servicios[0].idServicio,
+      fechaHora: '2026-05-10T10:00:00',
+      duracion: servicios[0].duracionMin + 30,
+      estado: 'CONFIRMADA',
+      montoAnticipo: 100,
+      anticipoPagado: 1,
+      notas: 'Prueba solapamiento 10:00',
+    },
+    {
+      idClienta: clientas[1].idClienta,
+      idServicio: servicios[1].idServicio,
+      fechaHora: '2026-05-10T13:00:00',
+      duracion: servicios[1].duracionMin + 30,
+      estado: 'CONFIRMADA',
+      montoAnticipo: 50,
+      anticipoPagado: 0,
+      notas: 'Prueba solapamiento 13:00',
+    },
+    {
+      idClienta: clientas[2].idClienta,
+      idServicio: servicios[2].idServicio,
+      fechaHora: '2026-05-10T16:00:00',
+      duracion: servicios[2].duracionMin + 30,
+      estado: 'PENDIENTE',
+      montoAnticipo: 0,
+      anticipoPagado: 0,
+      notas: 'Prueba solapamiento 16:00',
+    },
+  ];
+
+  const stmt = db.prepare(`
+    INSERT INTO citas (idClienta, idServicio, fechaHora, duracion, estado, montoAnticipo, anticipoPagado, notas)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  for (const c of citas) {
+    stmt.run(c.idClienta, c.idServicio, c.fechaHora, c.duracion, c.estado, c.montoAnticipo, c.anticipoPagado, c.notas);
+  }
+
+  console.log('Citas de prueba 2026-05-10 creadas');
+}
+
+module.exports = { seedUsuarios, seedClientas, seedServicios, seedCitasAgenda, seedCitasHoy2026 };
