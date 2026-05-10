@@ -34,11 +34,16 @@ class _DirectorioScreenViewState extends State<_DirectorioScreenView> {
   final _searchController = TextEditingController();
 
   Future<void> _openNuevaClientaModal() async {
+    final clientasProvider = context.read<ClientasProvider>();
+
     await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => const NuevaClientaModal(),
+      builder: (_) => ChangeNotifierProvider<ClientasProvider>.value(
+        value: clientasProvider,
+        child: const NuevaClientaModal(),
+      ),
     );
   }
 
