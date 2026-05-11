@@ -8,7 +8,6 @@ import '../../../shared/widgets/app_text_field.dart';
 const String _baseUrl = 'http://localhost:3000';
 
 class NuevoServicioModal extends StatefulWidget {
-  // Si llega un servicio = modo editar, si es null = modo crear
   final Servicio? servicio;
 
   const NuevoServicioModal({super.key, this.servicio});
@@ -30,13 +29,11 @@ class _NuevoServicioModalState extends State<NuevoServicioModal> {
   bool _guardando = false;
   String? _errorGuardar;
 
-  // Para saber si estamos editando o creando
   bool get _esEditar => widget.servicio != null;
 
   @override
   void initState() {
     super.initState();
-    // Si viene un servicio, precargamos todos los campos
     if (_esEditar) {
       final s = widget.servicio!;
       _nombreController.text = s.nombre;
@@ -45,8 +42,6 @@ class _NuevoServicioModalState extends State<NuevoServicioModal> {
       _esCombo = s.esCombo;
       _proximamente = s.proximamente;
       _activo = s.activo;
-
-      // Convertir duracionMin a la etiqueta del selector
       _duracionSeleccionada = _minToLabel(s.duracionMin);
     }
   }
@@ -59,7 +54,6 @@ class _NuevoServicioModalState extends State<NuevoServicioModal> {
     super.dispose();
   }
 
-  // Convierte los minutos del backend a la etiqueta visual del selector
   String _minToLabel(int min) {
     switch (min) {
       case 30:
@@ -74,7 +68,6 @@ class _NuevoServicioModalState extends State<NuevoServicioModal> {
     }
   }
 
-  // Convierte la etiqueta visual a minutos para enviar al backend
   int _labelToMin(String label) {
     switch (label) {
       case '30 MIN':
@@ -90,7 +83,6 @@ class _NuevoServicioModalState extends State<NuevoServicioModal> {
   }
 
   Future<void> _guardar() async {
-    // Validaciones básicas
     final nombre = _nombreController.text.trim();
     final precioTexto = _precioController.text.trim();
 
@@ -123,14 +115,12 @@ class _NuevoServicioModalState extends State<NuevoServicioModal> {
       http.Response response;
 
       if (_esEditar) {
-        // PUT para actualizar el servicio existente
         response = await http.put(
           Uri.parse('$_baseUrl/api/servicios/${widget.servicio!.id}'),
           headers: {'Content-Type': 'application/json'},
           body: body,
         );
       } else {
-        // POST para crear nuevo servicio
         response = await http.post(
           Uri.parse('$_baseUrl/api/servicios'),
           headers: {'Content-Type': 'application/json'},
@@ -172,7 +162,6 @@ class _NuevoServicioModalState extends State<NuevoServicioModal> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Palito decorativo
             Center(
               child: Container(
                 width: 40,
@@ -185,7 +174,6 @@ class _NuevoServicioModalState extends State<NuevoServicioModal> {
             ),
             const SizedBox(height: 20),
 
-            // Título cambia según modo
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -249,9 +237,11 @@ class _NuevoServicioModalState extends State<NuevoServicioModal> {
 
             _buildLabel('DURACIÓN'),
             const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: ['30 MIN', '45 MIN', '60 MIN', '90 MIN']
+            // Wrap en lugar de Row para que no se aprieten en pantallas angostas
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: ['30 MIN', '60 MIN', '90 MIN']
                   .map((t) => _buildDuracionTab(t))
                   .toList(),
             ),
@@ -278,7 +268,6 @@ class _NuevoServicioModalState extends State<NuevoServicioModal> {
               onChanged: (val) => setState(() => _activo = val),
             ),
 
-            // Error de guardado
             if (_errorGuardar != null) ...[
               const SizedBox(height: 12),
               Text(

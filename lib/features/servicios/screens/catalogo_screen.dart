@@ -24,10 +24,7 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
   String _categoriaActiva = 'TODOS';
   String _textoBusqueda = '';
 
-  // Lista completa: activos + inactivos
   List<Servicio> _todosLosServicios = [];
-
-  // Lista filtrada que se muestra en pantalla
   List<Servicio> _serviciosFiltrados = [];
 
   bool _cargando = true;
@@ -39,7 +36,6 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
     _cargarServicios();
   }
 
-  // Carga activos e inactivos en paralelo y los combina
   Future<void> _cargarServicios() async {
     setState(() {
       _cargando = true;
@@ -47,7 +43,6 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
     });
 
     try {
-      // Hacemos las dos peticiones al mismo tiempo
       final responses = await Future.wait([
         http.get(Uri.parse('$_baseUrl/api/servicios')),
         http.get(Uri.parse('$_baseUrl/api/servicios/inactivos')),
@@ -61,11 +56,15 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
             .map((e) => Servicio.fromJson(e))
             .toList();
 
+        final todos = [...activos, ...inactivos];
+
         setState(() {
-          _todosLosServicios = [...activos, ...inactivos];
+          _todosLosServicios = todos;
+          _serviciosFiltrados = todos
+              .where((s) => _coincideCategoria(s, _categoriaActiva))
+              .toList();
           _cargando = false;
         });
-        _aplicarFiltros();
       } else {
         setState(() {
           _errorServicios = 'Error al cargar servicios';
@@ -143,7 +142,6 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
     return Scaffold(
       backgroundColor: AppColors.blancoRoto,
       floatingActionButton: FabButton(onPressed: _abrirNuevoServicio),
-
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
@@ -155,14 +153,14 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
               SearchBarWidget(
                 hintText: 'Buscar servicio...',
                 onChanged: (texto) {
-                  _textoBusqueda = texto;
+                  setState(() => _textoBusqueda = texto);
                   _aplicarFiltros();
                 },
               ),
               const SizedBox(height: 12),
               FilterChipRow(
                 onCategoriaSeleccionada: (categoria) {
-                  _categoriaActiva = categoria;
+                  setState(() => _categoriaActiva = categoria);
                   _aplicarFiltros();
                 },
               ),
@@ -200,7 +198,6 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
                                     const SizedBox(height: 12),
                                 itemBuilder: (context, index) {
                                   final servicio = _serviciosFiltrados[index];
-
                                   return ServiceCard(
                                     servicio: servicio,
                                     onAgendar: servicio.proximamente ||
