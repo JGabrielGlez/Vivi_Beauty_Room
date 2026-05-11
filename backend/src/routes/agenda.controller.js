@@ -56,6 +56,7 @@ exports.obtenerCitas = (req, res) => {
   }
 };
 
+
 exports.obtenerCitasHoy = (req, res) => {
   const hoy = new Date();
   const yyyy = hoy.getFullYear();
@@ -65,6 +66,25 @@ exports.obtenerCitasHoy = (req, res) => {
   const sql = `SELECT * FROM citas WHERE date(fechaHora) = ? ORDER BY time(fechaHora)`;
   try {
     const rows = db.prepare(sql).all(fechaHoy);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Obtener citas por día específico
+exports.obtenerCitasPorDia = (req, res) => {
+  const { fecha } = req.query;
+  if (!fecha) {
+    return res.status(400).json({ error: 'Parámetro "fecha" requerido en formato YYYY-MM-DD' });
+  }
+  // Validar formato básico YYYY-MM-DD
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+    return res.status(400).json({ error: 'Formato de fecha inválido. Use YYYY-MM-DD' });
+  }
+  const sql = `SELECT * FROM citas WHERE date(fechaHora) = ? ORDER BY time(fechaHora)`;
+  try {
+    const rows = db.prepare(sql).all(fecha);
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: err.message });

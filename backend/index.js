@@ -27,10 +27,10 @@ const authRoutes = require("./src/routes/auth");
 app.use("/api/auth", authRoutes);
 
 // Rutas protegidas (con auth)
- app.use("/api/agenda", authMiddleware, require("./src/routes/agenda"));
+ app.use("/api/agenda", require("./src/routes/agenda"));
 // app.use('/api/citas',     authMiddleware, require('./src/routes/citas'));
-app.use("/api/servicios", authMiddleware, require("./src/routes/servicios"));
-app.use("/api/clientas", authMiddleware, require("./src/routes/clientas"));
+app.use("/api/servicios",  require("./src/routes/servicios"));
+app.use("/api/clientas",  require("./src/routes/clientas"));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));
