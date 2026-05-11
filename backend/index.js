@@ -31,6 +31,7 @@ app.use("/api/auth", authRoutes);
 
 // Rutas protegidas (con auth)
 app.use("/api/agenda", require("./src/routes/agenda"));
+app.use("/api/citas", require("./src/routes/citas"));
 app.use("/api/servicios", authMiddleware, require("./src/routes/servicios"));
 app.use("/api/clientas", authMiddleware, require("./src/routes/clientas"));
 

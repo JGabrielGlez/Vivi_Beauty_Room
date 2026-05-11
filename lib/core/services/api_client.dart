@@ -179,6 +179,29 @@ class ApiClient {
     }
   }
 
+  Future<Map<String, dynamic>> getCitas() async {
+    try {
+      final headers = await _authJsonHeaders();
+      final response = await http
+          .get(Uri.parse('${ApiConfig.baseUrl}/citas'), headers: headers)
+          .timeout(ApiConfig.receiveTimeout,
+              onTimeout: () => throw Exception('Timeout en conexión'));
+
+      if (response.statusCode == 200) {
+        final decodedBody = jsonDecode(response.body);
+        final list = decodedBody is List ? decodedBody : <dynamic>[];
+        return {'success': true, 'data': list};
+      }
+      if (response.statusCode == 401) {
+        await _handleUnauthorized();
+        return {'success': false, 'statusCode': 401, 'error': 'Token inválido o expirado'};
+      }
+      return {'success': false, 'statusCode': response.statusCode, 'error': 'Error al cargar citas'};
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
   Future<Map<String, dynamic>> getCitasDia(String fecha) async {
     try {
       final headers = await _authJsonHeaders();
