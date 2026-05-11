@@ -210,7 +210,7 @@ function seedCitasAgenda() {
       {
         idClienta: clientas[0].idClienta,
         idServicio: servicios[0].idServicio,
-        fechaHora: '2025-05-09T09:00:00',
+        fechaHora: '2026-05-09T09:00:00',
         duracion: servicios[0].duracionMin + 30,
         estado: 'CONFIRMADA',
         montoAnticipo: 100,
@@ -220,7 +220,7 @@ function seedCitasAgenda() {
       {
         idClienta: clientas[1].idClienta,
         idServicio: servicios[1].idServicio,
-        fechaHora: '2025-05-09T11:00:00',
+        fechaHora: '2026-05-09T11:00:00',
         duracion: servicios[1].duracionMin + 30,
         estado: 'PENDIENTE',
         montoAnticipo: 50,
@@ -230,7 +230,7 @@ function seedCitasAgenda() {
       {
         idClienta: clientas[2].idClienta,
         idServicio: servicios[2].idServicio,
-        fechaHora: '2025-05-09T13:00:00',
+        fechaHora: '2026-05-09T13:00:00',
         duracion: servicios[2].duracionMin + 30,
         estado: 'CONFIRMADA',
         montoAnticipo: 50,
@@ -240,7 +240,7 @@ function seedCitasAgenda() {
       {
         idClienta: clientas[3].idClienta,
         idServicio: servicios[3].idServicio,
-        fechaHora: '2025-05-10T10:00:00',
+        fechaHora: '2026-05-10T10:00:00',
         duracion: servicios[3].duracionMin + 30,
         estado: 'PENDIENTE',
         montoAnticipo: 50,
@@ -250,7 +250,7 @@ function seedCitasAgenda() {
       {
         idClienta: clientas[4].idClienta,
         idServicio: servicios[0].idServicio,
-        fechaHora: '2025-05-10T14:00:00',
+        fechaHora: '2026-05-10T14:00:00',
         duracion: servicios[0].duracionMin + 30,
         estado: 'CONFIRMADA',
         montoAnticipo: 100,
@@ -260,7 +260,7 @@ function seedCitasAgenda() {
       {
         idClienta: clientas[0].idClienta,
         idServicio: servicios[1].idServicio,
-        fechaHora: '2025-05-12T09:00:00',
+        fechaHora: '2026-05-12T09:00:00',
         duracion: servicios[1].duracionMin + 30,
         estado: 'PENDIENTE',
         montoAnticipo: 50,
@@ -270,7 +270,7 @@ function seedCitasAgenda() {
       {
         idClienta: clientas[1].idClienta,
         idServicio: servicios[2].idServicio,
-        fechaHora: '2025-05-12T11:00:00',
+        fechaHora: '2026-05-12T11:00:00',
         duracion: servicios[2].duracionMin + 30,
         estado: 'CANCELADA',
         montoAnticipo: 50,
@@ -280,7 +280,7 @@ function seedCitasAgenda() {
       {
         idClienta: clientas[2].idClienta,
         idServicio: servicios[3].idServicio,
-        fechaHora: '2025-05-13T16:00:00',
+        fechaHora: '2026-05-13T16:00:00',
         duracion: servicios[3].duracionMin + 30,
         estado: 'REPROGRAMADA',
         montoAnticipo: 50,

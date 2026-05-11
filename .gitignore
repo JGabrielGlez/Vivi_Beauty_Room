@@ -56,6 +56,7 @@ database.db
 # Variables de entorno
 
 # --- Flutter Generated Files ---
+# Archivos generados de plataformas
 linux/flutter/generated_plugin_registrant.*
 linux/flutter/generated_plugins.cmake
 macos/Flutter/GeneratedPluginRegistrant.swift
@@ -64,3 +65,4 @@ windows/flutter/generated_plugins.cmake
 **/flutter_export_environment.sh
 **/GeneratedPluginRegistrant.h
 **/GeneratedPluginRegistrant.m
+windows/flutter/generated_plugins.cmake

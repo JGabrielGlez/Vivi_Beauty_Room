@@ -4,6 +4,13 @@ import '../../../shared/widgets/primary_button.dart';
 import '../../../shared/widgets/secondary_button.dart';
 import '../../../shared/widgets/cliente_avatar.dart';
 import '../../../core/theme/app_colors.dart';
+import 'package:http/http.dart' as http;
+import 'agenda_screen.dart';
+
+String backendBaseUrl = const String.fromEnvironment('BACKEND_URL', defaultValue: 'http://localhost:3000');
+bool pago=true;
+String token="";
+Map<String,String> header = {'Content-Type': 'application/json','Authorization': 'Bearer $token'};
 
 // ─── MODELO TEMPORAL (sprint visual) ─────────────────────────────────────────
 // Reemplazar por el objeto Cita real de shared/models/ al integrar
@@ -18,6 +25,7 @@ class _CitaMock {
   final String notas;
   String estado;
   bool anticipoPagado;
+  final String id;
 
   _CitaMock({
     required this.nombreClienta,
@@ -30,13 +38,14 @@ class _CitaMock {
     required this.notas,
     required this.estado,
     required this.anticipoPagado,
+    required this.id,
   });
 }
 
 // ─── PANTALLA ─────────────────────────────────────────────────────────────────
 class DetalleCitaScreen extends StatefulWidget {
-  final _CitaMock? citaMock;
-  const DetalleCitaScreen({super.key, this.citaMock});
+  final Map<String, dynamic>? citaData;
+  const DetalleCitaScreen({super.key, this.citaData});
 
   @override
   State<DetalleCitaScreen> createState() => _DetalleCitaScreenState();
@@ -49,26 +58,24 @@ class _DetalleCitaScreenState extends State<DetalleCitaScreen> {
   static const Color _negro = Color(0xFF1A1A1A);
   static const Color _grisOscuro = Color(0xFF666666);
 
-  late _CitaMock _cita;
+  late Map<String, dynamic> _cita;
 
   @override
   void initState() {
     super.initState();
-    _cita =
-        widget.citaMock ??
-        _CitaMock(
-          nombreClienta: 'Sofía Ramírez',
-          servicio: 'Extensiones de Pestañas Clásicas',
-          fechaHora: DateTime(2026, 3, 15, 10, 30),
-          duracionMin: 90,
-          montoAnticipo: 100.0,
-          tieneAlergia: true,
-          notasAlergia:
-              'Alérgica al adhesivo de látex. Usar pegamento sin látex.',
-          notas: 'Cliente frecuente. Prefiere el acabado en L+.',
-          estado: 'PENDIENTE',
-          anticipoPagado: false,
-        );
+    _cita = widget.citaData ?? {
+      'nombreClienta': 'Sofía Ramírez',
+      'servicio': 'Extensiones de Pestañas Clásicas',
+      'fechaHora': DateTime(2026, 3, 15, 10, 30).toIso8601String(),
+      'duracionMin': 90,
+      'montoAnticipo': 100.0,
+      'tieneAlergia': true,
+      'notasAlergia': 'Alérgica al adhesivo de látex. Usar pegamento sin látex.',
+      'notas': 'Cliente frecuente. Prefiere el acabado en L+.',
+      'estado': 'PENDIENTE',
+      'anticipoPagado': false,
+    };
+    pago=_cita['anticipoPagado']==1;
   }
 
   String get _fechaFormateada {
@@ -87,31 +94,110 @@ class _DetalleCitaScreenState extends State<DetalleCitaScreen> {
       'noviembre',
       'diciembre',
     ];
-    final d = _cita.fechaHora;
+    DateTime d;
+    if (_cita['fechaHora'] is DateTime) {
+      d = _cita['fechaHora'];
+    } else if (_cita['fechaHora'] is String) {
+      d = DateTime.tryParse(_cita['fechaHora']) ?? DateTime.now();
+    } else {
+      d = DateTime.now();
+    }
     return '${d.day} de ${meses[d.month]} de ${d.year}';
   }
 
   String get _horaFormateada {
-    final d = _cita.fechaHora;
+    DateTime d;
+    if (_cita['fechaHora'] is DateTime) {
+      d = _cita['fechaHora'];
+    } else if (_cita['fechaHora'] is String) {
+      d = DateTime.tryParse(_cita['fechaHora']) ?? DateTime.now();
+    } else {
+      d = DateTime.now();
+    }
     return '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')} hrs';
   }
 
-  void _marcarAnticipoRecibido() => setState(() {
-    _cita.anticipoPagado = true;
-    _showSnack('Anticipo marcado como recibido');
-  });
-  void _confirmarCita() => setState(() {
-    _cita.estado = 'CONFIRMADA';
-    _showSnack('Cita confirmada');
-  });
-  void _completarCita() => setState(() {
-    _cita.estado = 'COMPLETADA';
-    _showSnack('Cita completada');
-  });
+  Future<void> _marcarAnticipoRecibido() async {
+    try {
+      final response = await http.put(
+        Uri.parse('$backendBaseUrl/api/agenda/citas/${_cita['id']}'),
+        headers: header,
+        body: '{"anticipoPagado": 1}',
+      );
+      if (response.statusCode == 200) {
+        // Opcional: volver a cargar la cita desde el backend para asegurar datos frescos
+        _showSnack('Anticipo marcado como recibido');
+        setState(() {pago=!pago;});
+        Navigator.pushReplacement(context,MaterialPageRoute(builder: (_) =>const AgendaScreen()),);
+      } else {
+        _showSnack('Error al marcar anticipo: ${response.statusCode}');
+      }
+    } catch (e) {
+      _showSnack('Error de red: $e');
+    }
+  }
+
+  Future<void> _refrescarCita() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$backendBaseUrl/api/agenda/citas/${_cita['id']}'),
+        headers: header,
+      );
+      if (response.statusCode == 200) {
+        final nuevaCita = Map<String, dynamic>.from(
+          response.body.isNotEmpty ? (response.body.startsWith('{') ? (response.body as dynamic) : {}) : {}
+        );
+        setState(() {
+          _cita.addAll(nuevaCita);
+        });
+      }
+    } catch (_) {
+      // Silenciar error de refresco
+    }
+  }
+  Future<void> _confirmarCita() async {
+    try {
+      final response = await http.put(
+        Uri.parse('$backendBaseUrl/api/agenda/citas/${_cita['id']}'),
+        headers: header,
+        body: '{"estado": "CONFIRMADA"}',
+      );
+      if (response.statusCode == 200) {
+        await _refrescarCita();
+        _showSnack('Cita confirmada');
+        Navigator.pushReplacement(context,MaterialPageRoute(builder: (_) =>const AgendaScreen()),);
+      } else {
+        _showSnack('Error al confirmar cita: ${response.statusCode}');
+      }
+    } catch (e) {
+      _showSnack('Error de red: $e');
+    }
+  }
+  Future<void> _completarCita() async {
+    try {
+      final response = await http.put(
+        Uri.parse('$backendBaseUrl/api/agenda/citas/${_cita['id']}'),
+        headers: header,
+        body: '{"estado": "COMPLETADA"}',
+      );
+      if (response.statusCode == 200) {
+        setState(() {
+          _cita['estado'] = 'COMPLETADA';
+        });
+        _showSnack('Cita marcada como completada');
+        Navigator.pushReplacement(context,MaterialPageRoute(builder: (_) =>const AgendaScreen()),);
+        
+      } else {
+        _showSnack('Error al completar cita: ${response.statusCode}');
+      }
+    } catch (e) {
+      _showSnack('Error de red: $e');
+    }
+  }
   void _reprogramarCita() =>
       _showSnack('Función de reprogramación próximamente');
   void _verPerfilClienta() =>
-      _showSnack('Navegar al perfil de ${_cita.nombreClienta}');
+      _showSnack('Navegar al perfil de ${_cita['nombreClienta'] ?? ''}');
 
   void _showSnack(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -170,10 +256,22 @@ class _DetalleCitaScreenState extends State<DetalleCitaScreen> {
       ),
     );
     if (confirmar == true) {
-      setState(() {
-        _cita.estado = 'CANCELADA';
-      });
-      _showSnack('Cita cancelada. Anticipo retenido.');
+      try {
+        final response = await http.put(
+          Uri.parse('$backendBaseUrl/api/agenda/citas/${_cita['id']}'),
+          headers: header,
+          body: '{"estado": "CANCELADA"}',
+        );
+        if (response.statusCode == 200) {
+          await _refrescarCita();
+          _showSnack('Cita cancelada. Anticipo retenido.');
+          Navigator.pushReplacement(context,MaterialPageRoute(builder: (_) =>const AgendaScreen()),);
+        } else {
+          _showSnack('Error al cancelar cita: ${response.statusCode}');
+        }
+      } catch (e) {
+        _showSnack('Error de red: $e');
+      }
     }
   }
 
@@ -208,38 +306,38 @@ class _DetalleCitaScreenState extends State<DetalleCitaScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (_cita.tieneAlergia) ...[
+            if (_cita['tieneAlergia'] == true) ...[
               _AlertBanner(
                 texto:
-                    _cita.notasAlergia ?? 'Clienta tiene alergias registradas.',
+                    _cita['notasAlergia'] ?? 'Clienta tiene alergias registradas.',
               ),
               const SizedBox(height: 16),
             ],
             _TarjetaEncabezado(
-              nombreClienta: _cita.nombreClienta,
-              servicio: _cita.servicio,
+              nombreClienta: _cita['nombreClienta'].toString() ?? '',
+              servicio: _cita['servicio'] ?? '',
               fecha: _fechaFormateada,
               hora: _horaFormateada,
-              duracionMin: _cita.duracionMin,
-              estado: _cita.estado,
+              duracionMin: _cita['duracionMin'] ?? _cita['duracion'] ?? 0,
+              estado: _cita['estado'] ?? '',
               onVerPerfil: _verPerfilClienta,
             ),
             const SizedBox(height: 16),
             _TarjetaAnticipo(
-              monto: _cita.montoAnticipo,
-              pagado: _cita.anticipoPagado,
-              onMarcarRecibido: _cita.anticipoPagado
-                  ? null
-                  : _marcarAnticipoRecibido,
+              monto: (_cita['montoAnticipo'] ?? 0).toDouble(),
+              pagado: _cita['anticipoPagado'] == 1,
+              onMarcarRecibido: (_cita['anticipoPagado'] == 0)
+                  ? _marcarAnticipoRecibido
+                  : null,
             ),
             const SizedBox(height: 16),
-            if (_cita.notas.isNotEmpty) ...[
-              _TarjetaNotas(notas: _cita.notas),
+            if ((_cita['notas'] ?? '').toString().isNotEmpty) ...[
+              _TarjetaNotas(notas: _cita['notas']),
               const SizedBox(height: 24),
             ],
             _SeccionAcciones(
-              estado: _cita.estado,
-              anticipoPagado: _cita.anticipoPagado,
+              estado: _cita['estado'] ?? '',
+              anticipoPagado: _cita['anticipoPagado'] == 1,
               onConfirmar: _confirmarCita,
               onCompletar: _completarCita,
               onReprogramar: _reprogramarCita,
@@ -365,20 +463,7 @@ class _TarjetaEncabezado extends StatelessWidget {
                   ],
                 ),
               ),
-              GestureDetector(
-                onTap: onVerPerfil,
-                child: const Text(
-                  'Ver perfil',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 13,
-                    color: Color(0xFFD4748F),
-                    fontWeight: FontWeight.w500,
-                    decoration: TextDecoration.underline,
-                    decorationColor: Color(0xFFD4748F),
-                  ),
-                ),
-              ),
+
             ],
           ),
           const SizedBox(height: 16),
@@ -606,7 +691,7 @@ class _SeccionAcciones extends StatelessWidget {
         ],
         // Completar: solo CONFIRMADA
         if (estado == 'CONFIRMADA') ...[
-          PrimaryButton(text: 'Marcar como completada', onPressed: onCompletar),
+          PrimaryButton(text: 'Marcar como completada', onPressed:pago?onCompletar: null),
           const SizedBox(height: 12),
         ],
         // Reprogramar: PENDIENTE o CONFIRMADA
