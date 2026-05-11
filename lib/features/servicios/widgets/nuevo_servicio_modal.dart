@@ -1,11 +1,9 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
+import '../../../core/services/api_client.dart';
 import '../../../shared/models/servicio.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../../shared/widgets/app_text_field.dart';
-
-const String _baseUrl = 'http://localhost:3000';
 
 class NuevoServicioModal extends StatefulWidget {
   final Servicio? servicio;
@@ -58,10 +56,9 @@ class _NuevoServicioModalState extends State<NuevoServicioModal> {
     switch (min) {
       case 30:
         return '30 MIN';
-      case 45:
-        return '45 MIN';
       case 90:
         return '90 MIN';
+      case 45:
       case 60:
       default:
         return '60 MIN';
@@ -72,8 +69,6 @@ class _NuevoServicioModalState extends State<NuevoServicioModal> {
     switch (label) {
       case '30 MIN':
         return 30;
-      case '45 MIN':
-        return 45;
       case '90 MIN':
         return 90;
       case '60 MIN':
@@ -101,44 +96,37 @@ class _NuevoServicioModalState extends State<NuevoServicioModal> {
       _errorGuardar = null;
     });
 
-    final body = jsonEncode({
-      'nombre': nombre,
-      'descripcion': _descripcionController.text.trim(),
-      'precio': double.parse(precioTexto),
-      'duracionMin': _labelToMin(_duracionSeleccionada),
-      'activo': _activo ? 1 : 0,
-      'proximamente': _proximamente ? 1 : 0,
-      'esCombo': _esCombo ? 1 : 0,
-    });
+    final apiClient = context.read<ApiClient>();
+    Map<String, dynamic> result;
 
-    try {
-      http.Response response;
+    if (_esEditar) {
+      result = await apiClient.actualizarServicio(
+        widget.servicio!.id,
+        nombre: nombre,
+        descripcion: _descripcionController.text.trim(),
+        precio: double.parse(precioTexto),
+        duracionMin: _labelToMin(_duracionSeleccionada),
+        activo: _activo ? 1 : 0,
+        proximamente: _proximamente ? 1 : 0,
+        esCombo: _esCombo ? 1 : 0,
+      );
+    } else {
+      result = await apiClient.crearServicio(
+        nombre: nombre,
+        descripcion: _descripcionController.text.trim(),
+        precio: double.parse(precioTexto),
+        duracionMin: _labelToMin(_duracionSeleccionada),
+        activo: _activo ? 1 : 0,
+        proximamente: _proximamente ? 1 : 0,
+        esCombo: _esCombo ? 1 : 0,
+      );
+    }
 
-      if (_esEditar) {
-        response = await http.put(
-          Uri.parse('$_baseUrl/api/servicios/${widget.servicio!.id}'),
-          headers: {'Content-Type': 'application/json'},
-          body: body,
-        );
-      } else {
-        response = await http.post(
-          Uri.parse('$_baseUrl/api/servicios'),
-          headers: {'Content-Type': 'application/json'},
-          body: body,
-        );
-      }
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        if (mounted) Navigator.pop(context);
-      } else {
-        setState(() {
-          _errorGuardar = 'Error ${response.statusCode}: no se pudo guardar';
-          _guardando = false;
-        });
-      }
-    } catch (e) {
+    if (result['success'] == true) {
+      if (mounted) Navigator.pop(context);
+    } else {
       setState(() {
-        _errorGuardar = 'No se pudo conectar al servidor';
+        _errorGuardar = result['error'] ?? 'No se pudo guardar';
         _guardando = false;
       });
     }
@@ -237,7 +225,6 @@ class _NuevoServicioModalState extends State<NuevoServicioModal> {
 
             _buildLabel('DURACIÓN'),
             const SizedBox(height: 8),
-            // Wrap en lugar de Row para que no se aprieten en pantallas angostas
             Wrap(
               spacing: 8,
               runSpacing: 8,

@@ -1,7 +1,7 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
 import 'package:vivi_room/features/citas/widgets/nueva_cita_modal.dart';
+import '../../../core/services/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../shared/models/servicio.dart';
 import '../../../shared/widgets/filter_chip_row.dart';
@@ -10,8 +10,6 @@ import '../../../shared/widgets/section_title.dart';
 import '../../../shared/widgets/fab_button.dart';
 import '../../../shared/widgets/service_card.dart';
 import '../widgets/nuevo_servicio_modal.dart';
-
-const String _baseUrl = 'http://localhost:3000';
 
 class CatalogoScreen extends StatefulWidget {
   const CatalogoScreen({super.key});
@@ -43,16 +41,24 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
     });
 
     try {
-      final responses = await Future.wait([
-        http.get(Uri.parse('$_baseUrl/api/servicios')),
-        http.get(Uri.parse('$_baseUrl/api/servicios/inactivos')),
+      final apiClient = context.read<ApiClient>();
+
+      final results = await Future.wait([
+        apiClient.getServicios(),
+        apiClient.getServiciosInactivos(),
       ]);
 
-      if (responses[0].statusCode == 200 && responses[1].statusCode == 200) {
-        final activos = (jsonDecode(responses[0].body) as List)
+      final resActivos = results[0];
+      final resInactivos = results[1];
+
+      print('ACTIVOS: $resActivos');
+      print('INACTIVOS: $resInactivos');
+
+      if (resActivos['success'] == true && resInactivos['success'] == true) {
+        final activos = (resActivos['data'] as List)
             .map((e) => Servicio.fromJson(e))
             .toList();
-        final inactivos = (jsonDecode(responses[1].body) as List)
+        final inactivos = (resInactivos['data'] as List)
             .map((e) => Servicio.fromJson(e))
             .toList();
 
@@ -67,11 +73,12 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
         });
       } else {
         setState(() {
-          _errorServicios = 'Error al cargar servicios';
+          _errorServicios = resActivos['error'] ?? 'Error al cargar servicios';
           _cargando = false;
         });
       }
     } catch (e) {
+      print('ERROR SERVICIOS: $e');
       setState(() {
         _errorServicios = 'No se pudo conectar al servidor';
         _cargando = false;

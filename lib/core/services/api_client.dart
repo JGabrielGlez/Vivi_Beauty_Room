@@ -472,4 +472,125 @@ class ApiClient {
       return {'success': false, 'error': e.toString()};
     }
   }
+  Future<Map<String, dynamic>> getServiciosInactivos() async {
+  try {
+    final headers = await _authJsonHeaders();
+    final response = await http
+        .get(Uri.parse('${ApiConfig.baseUrl}/servicios/inactivos'), headers: headers)
+        .timeout(ApiConfig.receiveTimeout,
+            onTimeout: () => throw Exception('Timeout en conexión'));
+
+    if (response.statusCode == 200) {
+      final decodedBody = jsonDecode(response.body);
+      final list = decodedBody is List ? decodedBody : <dynamic>[];
+      return {'success': true, 'data': list};
+    }
+    if (response.statusCode == 401) {
+      await _handleUnauthorized();
+      return {'success': false, 'statusCode': 401, 'error': 'Token inválido o expirado'};
+    }
+    final errorData = jsonDecode(response.body);
+    return {
+      'success': false,
+      'statusCode': response.statusCode,
+      'error': errorData['error'] ?? 'Error al cargar servicios inactivos',
+    };
+  } catch (e) {
+    return {'success': false, 'error': e.toString()};
+  }
+}
+
+Future<Map<String, dynamic>> crearServicio({
+  required String nombre,
+  required String descripcion,
+  required double precio,
+  required int duracionMin,
+  required int activo,
+  required int proximamente,
+  required int esCombo,
+}) async {
+  try {
+    final headers = await _authJsonHeaders();
+    final response = await http
+        .post(
+          Uri.parse('${ApiConfig.baseUrl}/servicios'),
+          headers: headers,
+          body: jsonEncode({
+            'nombre': nombre,
+            'descripcion': descripcion,
+            'precio': precio,
+            'duracionMin': duracionMin,
+            'activo': activo,
+            'proximamente': proximamente,
+            'esCombo': esCombo,
+          }),
+        )
+        .timeout(ApiConfig.connectionTimeout,
+            onTimeout: () => throw Exception('Timeout en conexión'));
+
+    if (response.statusCode == 201) {
+      return {'success': true, 'data': jsonDecode(response.body)};
+    }
+    if (response.statusCode == 401) {
+      await _handleUnauthorized();
+      return {'success': false, 'statusCode': 401, 'error': 'Token inválido o expirado'};
+    }
+    final errorData = jsonDecode(response.body);
+    return {
+      'success': false,
+      'statusCode': response.statusCode,
+      'error': errorData['error'] ?? 'Error al crear servicio',
+    };
+  } catch (e) {
+    return {'success': false, 'error': e.toString()};
+  }
+}
+//SERVICIOS
+
+Future<Map<String, dynamic>> actualizarServicio(
+  String id, {
+  required String nombre,
+  required String descripcion,
+  required double precio,
+  required int duracionMin,
+  required int activo,
+  required int proximamente,
+  required int esCombo,
+}) async {
+  try {
+    final headers = await _authJsonHeaders();
+    final response = await http
+        .put(
+          Uri.parse('${ApiConfig.baseUrl}/servicios/$id'),
+          headers: headers,
+          body: jsonEncode({
+            'nombre': nombre,
+            'descripcion': descripcion,
+            'precio': precio,
+            'duracionMin': duracionMin,
+            'activo': activo,
+            'proximamente': proximamente,
+            'esCombo': esCombo,
+          }),
+        )
+        .timeout(ApiConfig.connectionTimeout,
+            onTimeout: () => throw Exception('Timeout en conexión'));
+
+    if (response.statusCode == 200) {
+      return {'success': true, 'data': jsonDecode(response.body)};
+    }
+    if (response.statusCode == 401) {
+      await _handleUnauthorized();
+      return {'success': false, 'statusCode': 401, 'error': 'Token inválido o expirado'};
+    }
+    final errorData = jsonDecode(response.body);
+    return {
+      'success': false,
+      'statusCode': response.statusCode,
+      'error': errorData['error'] ?? 'Error al actualizar servicio',
+    };
+  } catch (e) {
+    return {'success': false, 'error': e.toString()};
+  }
+}
 }
