@@ -5,6 +5,7 @@ import '../../../shared/widgets/status_badge.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../../shared/widgets/secondary_button.dart';
 import '../../../shared/widgets/cliente_avatar.dart';
+import '../../citas/widgets/editar_cita_modal.dart';
 
 // ─── PANTALLA ─────────────────────────────────────────────────────────────────
 class DetalleCitaScreen extends StatefulWidget {
@@ -141,8 +142,20 @@ class _DetalleCitaScreenState extends State<DetalleCitaScreen> {
     }
   }
 
-  void _reprogramarCita() =>
-      _showSnack('Función de reprogramación próximamente');
+  Future<void> _reprogramarCita() async {
+    final id = _cita['id']?.toString() ?? '';
+    if (id.isEmpty) return;
+    final resultado = await showModalBottomSheet<dynamic>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => EditarCitaModal(citaId: id),
+    );
+    if (!mounted) return;
+    if (resultado != null) {
+      Navigator.pop(context);
+    }
+  }
 
   void _verPerfilClienta() =>
       _showSnack('Navegar al perfil de ${_cita['nombreClienta'] ?? ''}');

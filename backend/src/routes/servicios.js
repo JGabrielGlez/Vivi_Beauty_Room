@@ -2,9 +2,10 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db/schema');
 const soloAdmin = require('../middleware/soloAdmin');
+const authMiddleware = require('../middleware/auth');
 
 // GET /api/servicios/proximamente
-router.get('/proximamente', (req, res) => {
+router.get('/proximamente', authMiddleware, (req, res) => {
   try {
     const servicios = db.prepare(`
       SELECT * FROM servicios
@@ -16,9 +17,9 @@ router.get('/proximamente', (req, res) => {
     res.status(500).json({ error: 'Error al obtener servicios próximamente' });
   }
 });
-//INACTIVOS
+
 // GET /api/servicios/inactivos
-router.get('/inactivos', (req, res) => {
+router.get('/inactivos', authMiddleware, (req, res) => {
   try {
     const servicios = db.prepare(`
       SELECT * FROM servicios
@@ -30,8 +31,9 @@ router.get('/inactivos', (req, res) => {
     res.status(500).json({ error: 'Error al obtener servicios inactivos' });
   }
 });
+
 // GET /api/servicios/combos
-router.get('/combos', (req, res) => {
+router.get('/combos', authMiddleware, (req, res) => {
   try {
     const combos = db.prepare(`
       SELECT * FROM servicios
@@ -53,7 +55,7 @@ router.get('/combos', (req, res) => {
 });
 
 // GET /api/servicios
-router.get('/', (req, res) => {
+router.get('/', authMiddleware, (req, res) => {
   try {
     const servicios = db.prepare(`
       SELECT * FROM servicios
@@ -67,7 +69,7 @@ router.get('/', (req, res) => {
 });
 
 // GET /api/servicios/:id
-router.get('/:id', (req, res) => {
+router.get('/:id', authMiddleware, (req, res) => {
   try {
     const servicio = db.prepare(`
       SELECT * FROM servicios WHERE idServicio = ?
@@ -88,7 +90,7 @@ router.get('/:id', (req, res) => {
 });
 
 // POST /api/servicios
-router.post('/', (req, res) => {
+router.post('/', authMiddleware, (req, res) => {
   try {
     const {
       nombre,
@@ -126,7 +128,7 @@ router.post('/', (req, res) => {
     );
 
     const nuevo = db.prepare(`
-      SELECT * FROM servicios WHERE idServicio = ?
+      SELECT * FROM servicios WHERE rowid = ?
     `).get(result.lastInsertRowid);
 
     res.status(201).json(nuevo);
@@ -136,7 +138,7 @@ router.post('/', (req, res) => {
 });
 
 // PUT /api/servicios/:id
-router.put('/:id', (req, res) => {
+router.put('/:id', authMiddleware, (req, res) => {
   try {
     const servicio = db.prepare(`
       SELECT * FROM servicios WHERE idServicio = ?
@@ -192,24 +194,5 @@ router.put('/:id', (req, res) => {
     res.status(500).json({ error: 'Error al actualizar el servicio' });
   }
 });
-// DELETE /api/servicios/:id
-router.delete('/:id', (req, res) => {
-  try {
-    const servicio = db.prepare(`
-      SELECT * FROM servicios WHERE idServicio = ?
-    `).get(req.params.id);
 
-    if (!servicio) {
-      return res.status(404).json({ error: 'Servicio no encontrado' });
-    }
-
-    db.prepare(`
-      DELETE FROM servicios WHERE idServicio = ?
-    `).run(req.params.id);
-
-    res.json({ mensaje: 'Servicio eliminado correctamente' });
-  } catch (error) {
-    res.status(500).json({ error: 'Error al eliminar el servicio' });
-  }
-});
 module.exports = router;

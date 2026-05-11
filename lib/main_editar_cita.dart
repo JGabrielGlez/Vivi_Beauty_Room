@@ -28,7 +28,7 @@ class _ModalPreview extends StatelessWidget {
             showModalBottomSheet(
               context: context,
               isScrollControlled: true,
-              builder: (_) => EditarCitaModal(),
+              builder: (_) => EditarCitaModal(citaId: 'PLACEHOLDER_ID'),
             );
           },
           child: Text('Abrir modal'),

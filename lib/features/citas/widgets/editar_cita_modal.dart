@@ -1,24 +1,22 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
+import '../../../core/services/api_client.dart';
 import '../../../shared/models/clienta.dart';
 import '../../../shared/models/servicio.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../../shared/widgets/search_bar_widget.dart';
 
-const String _baseUrl = 'http://localhost:3000';
-
 class EditarCitaModal extends StatefulWidget {
-  const EditarCitaModal({super.key});
+  final String citaId;
+  const EditarCitaModal({super.key, required this.citaId});
 
   @override
   State<EditarCitaModal> createState() => _EditarCitaModalState();
 }
 
 class _EditarCitaModalState extends State<EditarCitaModal> {
-  // ID de la cita a editar — reemplazar por el real cuando se integre con la pantalla
-  final String _citaId = '2886625eccce26bc';
+  late ApiClient _apiClient;
 
   int _tiempoExtra = 0;
   List<Servicio> _servicios = [];
@@ -40,7 +38,6 @@ class _EditarCitaModalState extends State<EditarCitaModal> {
   bool _cancelando = false;
   String? _errorGuardar;
 
-  // Estado de carga inicial de la cita
   bool _cargandoCita = true;
   String? _errorCarga;
 
@@ -51,9 +48,15 @@ class _EditarCitaModalState extends State<EditarCitaModal> {
   Timer? _debounceTimer;
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _apiClient = context.read<ApiClient>();
+  }
+
+  @override
   void initState() {
     super.initState();
-    _cargarTodo();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _cargarTodo());
   }
 
   @override
@@ -65,98 +68,76 @@ class _EditarCitaModalState extends State<EditarCitaModal> {
     super.dispose();
   }
 
-  // Carga servicios primero, luego los datos de la cita
   Future<void> _cargarTodo() async {
     await _cargarServicios();
     await _cargarCita();
   }
 
   Future<void> _cargarServicios() async {
-    try {
-      final response = await http.get(Uri.parse('$_baseUrl/api/servicios'));
-      if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
-        setState(() {
-          _servicios = data.map((e) => Servicio.fromJson(e)).toList();
-          _cargando = false;
-        });
-      } else {
-        setState(() {
-          _errorServicios = 'Error ${response.statusCode}';
-          _cargando = false;
-        });
-      }
-    } catch (e) {
+    final result = await _apiClient.getServicios();
+    if (!mounted) return;
+    if (result['success'] == true) {
       setState(() {
-        _errorServicios = 'No se pudo conectar al servidor';
+        _servicios = (result['data'] as List)
+            .map((e) => Servicio.fromJson(e))
+            .toList();
+        _cargando = false;
+      });
+    } else {
+      setState(() {
+        _errorServicios = result['error'] ?? 'Error al cargar servicios';
         _cargando = false;
       });
     }
   }
 
-  // Carga los datos de la cita y pre-llena todos los campos
   Future<void> _cargarCita() async {
-    try {
-      final response = await http.get(
-        Uri.parse('$_baseUrl/api/agenda/citas/$_citaId'),
-      );
+    final result = await _apiClient.getCitaDetalle(widget.citaId);
+    if (!mounted) return;
+    if (result['success'] == true) {
+      final cita = result['data'] as Map<String, dynamic>;
+      final dt = DateTime.parse(cita['fechaHora'] as String);
+      final idServicio = cita['idServicio'] as String;
 
-      if (response.statusCode == 200) {
-        final cita = jsonDecode(response.body) as Map<String, dynamic>;
+      int tiempoExtra = 0;
+      try {
+        final servicio = _servicios.firstWhere((s) => s.id == idServicio);
+        tiempoExtra = ((cita['duracion'] as int) - servicio.duracionMin - 30)
+            .clamp(0, 9999);
+      } catch (_) {}
 
-        final dt = DateTime.parse(cita['fechaHora'] as String);
-        final idServicio = cita['idServicio'] as String;
-
-        // Calcular tiempo extra: duracion_total - duracion_servicio - 30 buffer
-        int tiempoExtra = 0;
-        try {
-          final servicio = _servicios.firstWhere((s) => s.id == idServicio);
-          tiempoExtra = ((cita['duracion'] as int) - servicio.duracionMin - 30)
-              .clamp(0, 9999);
-        } catch (_) {}
-
-        setState(() {
-          _servicioSeleccionadoId = idServicio;
-          _fechaSeleccionada = DateTime(dt.year, dt.month, dt.day);
-          _horaSeleccionada = TimeOfDay(hour: dt.hour, minute: dt.minute);
-          _tiempoExtra = tiempoExtra;
-          _cargandoCita = false;
-        });
-
-        final monto = cita['montoAnticipo'];
-        if (monto != null && monto != 0) {
-          _anticipoController.text = (monto as num).toStringAsFixed(2);
-        }
-        _notasController.text = (cita['notas'] as String?) ?? '';
-
-        final idClienta = cita['idClienta'] as String?;
-        if (idClienta != null) {
-          await _cargarClientaPorId(idClienta);
-        }
-      } else {
-        setState(() {
-          _errorCarga = 'No se pudo cargar la cita';
-          _cargandoCita = false;
-        });
-      }
-    } catch (_) {
       setState(() {
-        _errorCarga = 'Error de conexión al cargar la cita';
+        _servicioSeleccionadoId = idServicio;
+        _fechaSeleccionada = DateTime(dt.year, dt.month, dt.day);
+        _horaSeleccionada = TimeOfDay(hour: dt.hour, minute: dt.minute);
+        _tiempoExtra = tiempoExtra;
+        _cargandoCita = false;
+      });
+
+      final monto = cita['montoAnticipo'];
+      if (monto != null && monto != 0) {
+        _anticipoController.text = (monto as num).toStringAsFixed(2);
+      }
+      _notasController.text = (cita['notas'] as String?) ?? '';
+
+      final idClienta = cita['idClienta'] as String?;
+      if (idClienta != null) {
+        await _cargarClientaPorId(idClienta);
+      }
+    } else {
+      setState(() {
+        _errorCarga = result['error'] ?? 'No se pudo cargar la cita';
         _cargandoCita = false;
       });
     }
   }
 
   Future<void> _cargarClientaPorId(String idClienta) async {
-    try {
-      final response = await http.get(
-        Uri.parse('$_baseUrl/api/clientas/$idClienta'),
-      );
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        setState(() => _clientaSeleccionada = Clienta.fromJson(data));
-      }
-    } catch (_) {}
+    final result = await _apiClient.getClientaDetalle(idClienta);
+    if (!mounted) return;
+    if (result['success'] == true) {
+      setState(() => _clientaSeleccionada = Clienta.fromJson(result['data']));
+    }
   }
 
   void _onBusquedaChanged(String q) {
@@ -176,22 +157,282 @@ class _EditarCitaModalState extends State<EditarCitaModal> {
 
   Future<void> _buscarClientas(String q) async {
     setState(() => _buscandoClientas = true);
-    try {
-      final uri = Uri.parse('$_baseUrl/api/clientas')
-          .replace(queryParameters: {'q': q});
-      final response = await http.get(uri);
-      if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
-        setState(() {
-          _resultadosBusqueda = data.map((e) => Clienta.fromJson(e)).toList();
-          _buscandoClientas = false;
-        });
-      } else {
-        setState(() => _buscandoClientas = false);
-      }
-    } catch (_) {
+    final result = await _apiClient.getClientas(query: q);
+    if (!mounted) return;
+    if (result['success'] == true) {
+      setState(() {
+        _resultadosBusqueda = (result['data'] as List)
+            .map((e) => Clienta.fromJson(e))
+            .toList();
+        _buscandoClientas = false;
+      });
+    } else {
       setState(() => _buscandoClientas = false);
     }
+  }
+
+  Future<void> _verificarSolapamiento() async {
+    if (_servicioSeleccionadoId == null ||
+        _errorFechaHora != null ||
+        _fechaSeleccionada == null ||
+        _horaSeleccionada == null) {
+      setState(() => _errorSolapamiento = null);
+      return;
+    }
+
+    final servicio =
+        _servicios.firstWhere((s) => s.id == _servicioSeleccionadoId);
+    final fecha = _fechaSeleccionada!;
+    final hora = _horaSeleccionada!;
+    final inicioStr =
+        '${fecha.year}-${fecha.month.toString().padLeft(2, '0')}-${fecha.day.toString().padLeft(2, '0')}';
+
+    final newStart =
+        DateTime(fecha.year, fecha.month, fecha.day, hora.hour, hora.minute);
+    final newEnd = newStart
+        .add(Duration(minutes: servicio.duracionMin + _tiempoExtra + 30));
+
+    setState(() => _verificandoSolapamiento = true);
+
+    final result = await _apiClient.getCitasSemana(inicioStr);
+    if (!mounted) return;
+
+    if (result['success'] == true) {
+      final List<dynamic> data = result['data'] as List<dynamic>;
+      String? conflicto;
+
+      for (final cita in data) {
+        if (cita['estado'] == 'CANCELADA') continue;
+        if ((cita['idCita']?.toString()) == widget.citaId) continue;
+
+        final existStart = DateTime.parse(cita['fechaHora'] as String);
+        if (existStart.year != fecha.year ||
+            existStart.month != fecha.month ||
+            existStart.day != fecha.day) continue;
+
+        final existEnd =
+            existStart.add(Duration(minutes: cita['duracion'] as int));
+
+        if (newStart.isBefore(existEnd) && newEnd.isAfter(existStart)) {
+          final h = existStart.hour.toString().padLeft(2, '0');
+          final m = existStart.minute.toString().padLeft(2, '0');
+          final duracionTotal = servicio.duracionMin + _tiempoExtra + 30;
+          final siguiente =
+              _siguienteDisponible(data, newStart, duracionTotal, fecha);
+          conflicto = siguiente != null
+              ? 'Se solapa con la cita de las $h:$m. Próximo disponible: $siguiente'
+              : 'Se solapa con la cita de las $h:$m';
+          break;
+        }
+      }
+
+      setState(() {
+        _errorSolapamiento = conflicto;
+        _verificandoSolapamiento = false;
+      });
+    } else {
+      setState(() => _verificandoSolapamiento = false);
+    }
+  }
+
+  String? _siguienteDisponible(
+    List<dynamic> citasDelDia,
+    DateTime newStart,
+    int duracionMin,
+    DateTime fecha,
+  ) {
+    final intervals = citasDelDia
+        .where((c) => c['estado'] != 'CANCELADA')
+        .where((c) => (c['idCita']?.toString()) != widget.citaId)
+        .where((c) {
+          final s = DateTime.parse(c['fechaHora'] as String);
+          return s.year == fecha.year &&
+              s.month == fecha.month &&
+              s.day == fecha.day;
+        })
+        .map((c) {
+          final s = DateTime.parse(c['fechaHora'] as String);
+          return (
+            start: s,
+            end: s.add(Duration(minutes: c['duracion'] as int))
+          );
+        })
+        .toList();
+
+    DateTime? maxConflictEnd;
+    final newEnd = newStart.add(Duration(minutes: duracionMin));
+    for (final i in intervals) {
+      if (newStart.isBefore(i.end) && newEnd.isAfter(i.start)) {
+        if (maxConflictEnd == null || i.end.isAfter(maxConflictEnd)) {
+          maxConflictEnd = i.end;
+        }
+      }
+    }
+    if (maxConflictEnd == null) return null;
+
+    final totalMin = maxConflictEnd.hour * 60 + maxConflictEnd.minute;
+    int candidateMin = ((totalMin + 29) ~/ 30) * 30;
+
+    while (candidateMin < 21 * 60) {
+      final cStart = DateTime(fecha.year, fecha.month, fecha.day,
+          candidateMin ~/ 60, candidateMin % 60);
+      final cEnd = cStart.add(Duration(minutes: duracionMin));
+      final hasConflict =
+          intervals.any((i) => cStart.isBefore(i.end) && cEnd.isAfter(i.start));
+      if (!hasConflict) {
+        final h = (candidateMin ~/ 60).toString().padLeft(2, '0');
+        final m = (candidateMin % 60).toString().padLeft(2, '0');
+        return '$h:$m';
+      }
+      candidateMin += 30;
+    }
+    return null;
+  }
+
+  String _duracionServicio() {
+    if (_servicioSeleccionadoId == null) return '-- min';
+    try {
+      final s = _servicios.firstWhere((s) => s.id == _servicioSeleccionadoId);
+      return '${s.duracionMin} min';
+    } catch (_) {
+      return '-- min';
+    }
+  }
+
+  String _precioServicio() {
+    if (_servicioSeleccionadoId == null) return '\$ --';
+    try {
+      final s = _servicios.firstWhere((s) => s.id == _servicioSeleccionadoId);
+      return '\$${s.precio.toStringAsFixed(2)}';
+    } catch (_) {
+      return '\$ --';
+    }
+  }
+
+  Future<void> _guardarCambios() async {
+    if (_servicioSeleccionadoId == null ||
+        _fechaSeleccionada == null ||
+        _horaSeleccionada == null) {
+      setState(() => _errorGuardar = 'Completa el servicio, fecha y hora');
+      return;
+    }
+    if (_errorFechaHora != null ||
+        _errorSolapamiento != null ||
+        _errorAnticipo != null) {
+      setState(() => _errorGuardar = 'Corrige los errores antes de guardar');
+      return;
+    }
+    setState(() => _errorGuardar = null);
+
+    final servicio =
+        _servicios.firstWhere((s) => s.id == _servicioSeleccionadoId);
+    final f = _fechaSeleccionada!;
+    final h = _horaSeleccionada!;
+    final fechaHora =
+        '${f.year}-${f.month.toString().padLeft(2, '0')}-${f.day.toString().padLeft(2, '0')}'
+        'T${h.hour.toString().padLeft(2, '0')}:${h.minute.toString().padLeft(2, '0')}:00';
+    final duracion = servicio.duracionMin + _tiempoExtra + 30;
+    final montoAnticipo = double.tryParse(_anticipoController.text) ?? 0;
+    final notas = _notasController.text.trim().isEmpty
+        ? null
+        : _notasController.text.trim();
+
+    setState(() => _guardando = true);
+
+    final result = await _apiClient.editarCita(widget.citaId, {
+      'idClienta': _clientaSeleccionada?.id,
+      'idServicio': _servicioSeleccionadoId,
+      'fechaHora': fechaHora,
+      'duracion': duracion,
+      'montoAnticipo': montoAnticipo,
+      'notas': notas,
+    });
+
+    if (!mounted) return;
+
+    if (result['success'] == true) {
+      Navigator.pop(context, true);
+    } else {
+      setState(() {
+        _errorGuardar = result['error'] ?? 'Error al guardar los cambios';
+        _guardando = false;
+      });
+    }
+  }
+
+  Future<void> _cancelarCita() async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      useRootNavigator: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('¿Cancelar cita?',
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        content: const Text(
+            'Esta acción marcará la cita como cancelada. ¿Deseas continuar?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text('No', style: TextStyle(color: Colors.grey[600])),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red[400],
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Sí, cancelar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true) return;
+
+    setState(() => _cancelando = true);
+
+    final result = await _apiClient.editarCita(
+      widget.citaId,
+      {'estado': 'CANCELADA'},
+    );
+
+    if (!mounted) return;
+
+    if (result['success'] == true) {
+      Navigator.pop(context, 'cancelada');
+    } else {
+      setState(() {
+        _errorGuardar = result['error'] ?? 'Error al cancelar la cita';
+        _cancelando = false;
+      });
+    }
+  }
+
+  void _validarAnticipo(String value) {
+    final anticipo = double.tryParse(value);
+    if (_servicioSeleccionadoId == null) {
+      setState(() => _errorAnticipo = null);
+      return;
+    }
+    final s = _servicios.firstWhere((s) => s.id == _servicioSeleccionadoId);
+    if (anticipo == null || anticipo < 0) {
+      setState(() => _errorAnticipo = 'Monto inválido');
+    } else if (anticipo > s.precio) {
+      setState(
+          () => _errorAnticipo = 'No puede superar \$${s.precio.toStringAsFixed(2)}');
+    } else {
+      setState(() => _errorAnticipo = null);
+    }
+  }
+
+  void _validarFechaHora(DateTime fecha, TimeOfDay hora) {
+    final dt =
+        DateTime(fecha.year, fecha.month, fecha.day, hora.hour, hora.minute);
+    _errorFechaHora = dt.isAfter(DateTime.now())
+        ? null
+        : 'La fecha y hora deben ser en el futuro';
   }
 
   @override
@@ -223,7 +464,6 @@ class _EditarCitaModalState extends State<EditarCitaModal> {
               ),
             ),
             const SizedBox(height: 20),
-
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -247,7 +487,6 @@ class _EditarCitaModalState extends State<EditarCitaModal> {
             ),
             const SizedBox(height: 20),
 
-            // Spinner de carga inicial
             if (_cargandoCita)
               const Center(
                 child: Padding(
@@ -744,298 +983,6 @@ class _EditarCitaModalState extends State<EditarCitaModal> {
     );
   }
 
-  Future<void> _verificarSolapamiento() async {
-    if (_servicioSeleccionadoId == null ||
-        _errorFechaHora != null ||
-        _fechaSeleccionada == null ||
-        _horaSeleccionada == null) {
-      setState(() => _errorSolapamiento = null);
-      return;
-    }
-
-    final servicio =
-        _servicios.firstWhere((s) => s.id == _servicioSeleccionadoId);
-    final fecha = _fechaSeleccionada!;
-    final hora = _horaSeleccionada!;
-    final inicioStr =
-        '${fecha.year}-${fecha.month.toString().padLeft(2, '0')}-${fecha.day.toString().padLeft(2, '0')}';
-
-    final newStart = DateTime(
-        fecha.year, fecha.month, fecha.day, hora.hour, hora.minute);
-    final newEnd = newStart
-        .add(Duration(minutes: servicio.duracionMin + _tiempoExtra + 30));
-
-    setState(() => _verificandoSolapamiento = true);
-
-    try {
-      final uri = Uri.parse('$_baseUrl/api/agenda/citas/semana')
-          .replace(queryParameters: {'inicio': inicioStr});
-      final response = await http.get(uri);
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
-        String? conflicto;
-
-        for (final cita in data) {
-          if (cita['estado'] == 'CANCELADA') continue;
-          // Excluir la cita que se está editando para no conflictar consigo misma
-          if ((cita['idCita'] as String?) == _citaId) continue;
-
-          final existStart = DateTime.parse(cita['fechaHora'] as String);
-          if (existStart.year != fecha.year ||
-              existStart.month != fecha.month ||
-              existStart.day != fecha.day) {
-            continue;
-          }
-
-          final existEnd =
-              existStart.add(Duration(minutes: cita['duracion'] as int));
-
-          if (newStart.isBefore(existEnd) && newEnd.isAfter(existStart)) {
-            final h = existStart.hour.toString().padLeft(2, '0');
-            final m = existStart.minute.toString().padLeft(2, '0');
-            final duracionTotal = servicio.duracionMin + _tiempoExtra + 30;
-            final siguiente =
-                _siguienteDisponible(data, newStart, duracionTotal, fecha);
-            conflicto = siguiente != null
-                ? 'Se solapa con la cita de las $h:$m. Próximo disponible: $siguiente'
-                : 'Se solapa con la cita de las $h:$m';
-            break;
-          }
-        }
-
-        setState(() {
-          _errorSolapamiento = conflicto;
-          _verificandoSolapamiento = false;
-        });
-      } else {
-        setState(() => _verificandoSolapamiento = false);
-      }
-    } catch (_) {
-      setState(() => _verificandoSolapamiento = false);
-    }
-  }
-
-  String? _siguienteDisponible(
-    List<dynamic> citasDelDia,
-    DateTime newStart,
-    int duracionMin,
-    DateTime fecha,
-  ) {
-    final intervals = citasDelDia
-        .where((c) => c['estado'] != 'CANCELADA')
-        .where((c) => (c['idCita'] as String?) != _citaId)
-        .where((c) {
-          final s = DateTime.parse(c['fechaHora'] as String);
-          return s.year == fecha.year &&
-              s.month == fecha.month &&
-              s.day == fecha.day;
-        })
-        .map((c) {
-          final s = DateTime.parse(c['fechaHora'] as String);
-          return (
-            start: s,
-            end: s.add(Duration(minutes: c['duracion'] as int))
-          );
-        })
-        .toList();
-
-    DateTime? maxConflictEnd;
-    final newEnd = newStart.add(Duration(minutes: duracionMin));
-    for (final i in intervals) {
-      if (newStart.isBefore(i.end) && newEnd.isAfter(i.start)) {
-        if (maxConflictEnd == null || i.end.isAfter(maxConflictEnd)) {
-          maxConflictEnd = i.end;
-        }
-      }
-    }
-    if (maxConflictEnd == null) return null;
-
-    final totalMin = maxConflictEnd.hour * 60 + maxConflictEnd.minute;
-    int candidateMin = ((totalMin + 29) ~/ 30) * 30;
-
-    while (candidateMin < 21 * 60) {
-      final cStart = DateTime(fecha.year, fecha.month, fecha.day,
-          candidateMin ~/ 60, candidateMin % 60);
-      final cEnd = cStart.add(Duration(minutes: duracionMin));
-      final hasConflict =
-          intervals.any((i) => cStart.isBefore(i.end) && cEnd.isAfter(i.start));
-      if (!hasConflict) {
-        final h = (candidateMin ~/ 60).toString().padLeft(2, '0');
-        final m = (candidateMin % 60).toString().padLeft(2, '0');
-        return '$h:$m';
-      }
-      candidateMin += 30;
-    }
-    return null;
-  }
-
-  String _duracionServicio() {
-    if (_servicioSeleccionadoId == null) return '-- min';
-    try {
-      final s = _servicios.firstWhere((s) => s.id == _servicioSeleccionadoId);
-      return '${s.duracionMin} min';
-    } catch (_) {
-      return '-- min';
-    }
-  }
-
-  String _precioServicio() {
-    if (_servicioSeleccionadoId == null) return '\$ --';
-    try {
-      final s = _servicios.firstWhere((s) => s.id == _servicioSeleccionadoId);
-      return '\$${s.precio.toStringAsFixed(2)}';
-    } catch (_) {
-      return '\$ --';
-    }
-  }
-
-  Future<void> _guardarCambios() async {
-    if (_servicioSeleccionadoId == null ||
-        _fechaSeleccionada == null ||
-        _horaSeleccionada == null) {
-      setState(() => _errorGuardar = 'Completa el servicio, fecha y hora');
-      return;
-    }
-    if (_errorFechaHora != null ||
-        _errorSolapamiento != null ||
-        _errorAnticipo != null) {
-      setState(() => _errorGuardar = 'Corrige los errores antes de guardar');
-      return;
-    }
-    setState(() => _errorGuardar = null);
-
-    final servicio =
-        _servicios.firstWhere((s) => s.id == _servicioSeleccionadoId);
-    final f = _fechaSeleccionada!;
-    final h = _horaSeleccionada!;
-    final fechaHora =
-        '${f.year}-${f.month.toString().padLeft(2, '0')}-${f.day.toString().padLeft(2, '0')}'
-        'T${h.hour.toString().padLeft(2, '0')}:${h.minute.toString().padLeft(2, '0')}:00';
-    final duracion = servicio.duracionMin + _tiempoExtra + 30;
-    final montoAnticipo = double.tryParse(_anticipoController.text) ?? 0;
-    final notas = _notasController.text.trim().isEmpty
-        ? null
-        : _notasController.text.trim();
-
-    setState(() => _guardando = true);
-
-    try {
-      final response = await http.put(
-        Uri.parse('$_baseUrl/api/agenda/citas/$_citaId'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'idClienta': _clientaSeleccionada?.id,
-          'idServicio': _servicioSeleccionadoId,
-          'fechaHora': fechaHora,
-          'duracion': duracion,
-          'montoAnticipo': montoAnticipo,
-          'notas': notas,
-        }),
-      );
-
-      if (!mounted) return;
-
-      if (response.statusCode == 200) {
-        Navigator.pop(context, true);
-      } else {
-        final body = jsonDecode(response.body);
-        setState(() {
-          _errorGuardar = body['error'] ?? 'Error al guardar los cambios';
-          _guardando = false;
-        });
-      }
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _errorGuardar = 'No se pudo conectar al servidor';
-        _guardando = false;
-      });
-    }
-  }
-
-  Future<void> _cancelarCita() async {
-    final confirmar = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('¿Cancelar cita?',
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        content: const Text(
-            'Esta acción marcará la cita como cancelada. ¿Deseas continuar?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('No', style: TextStyle(color: Colors.grey[600])),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red[400],
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
-            ),
-            child: const Text('Sí, cancelar'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmar != true) return;
-
-    setState(() => _cancelando = true);
-
-    try {
-      final response = await http.delete(
-        Uri.parse('$_baseUrl/api/agenda/citas/$_citaId'),
-      );
-
-      if (!mounted) return;
-
-      if (response.statusCode == 200) {
-        Navigator.pop(context, 'cancelada');
-      } else {
-        final body = jsonDecode(response.body);
-        setState(() {
-          _errorGuardar = body['error'] ?? 'Error al cancelar la cita';
-          _cancelando = false;
-        });
-      }
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _errorGuardar = 'No se pudo conectar al servidor';
-        _cancelando = false;
-      });
-    }
-  }
-
-  void _validarAnticipo(String value) {
-    final anticipo = double.tryParse(value);
-    if (_servicioSeleccionadoId == null) {
-      setState(() => _errorAnticipo = null);
-      return;
-    }
-    final s = _servicios.firstWhere((s) => s.id == _servicioSeleccionadoId);
-    if (anticipo == null || anticipo < 0) {
-      setState(() => _errorAnticipo = 'Monto inválido');
-    } else if (anticipo > s.precio) {
-      setState(
-          () => _errorAnticipo = 'No puede superar \$${s.precio.toStringAsFixed(2)}');
-    } else {
-      setState(() => _errorAnticipo = null);
-    }
-  }
-
-  void _validarFechaHora(DateTime fecha, TimeOfDay hora) {
-    final dt =
-        DateTime(fecha.year, fecha.month, fecha.day, hora.hour, hora.minute);
-    _errorFechaHora = dt.isAfter(DateTime.now())
-        ? null
-        : 'La fecha y hora deben ser en el futuro';
-  }
-
   Widget _buildFechaPicker() {
     final texto = _fechaSeleccionada == null
         ? '-- --- ----'
@@ -1124,6 +1071,7 @@ class _EditarCitaModalState extends State<EditarCitaModal> {
 
         final result = await showDialog<TimeOfDay>(
           context: context,
+          useRootNavigator: false,
           builder: (context) => StatefulBuilder(
             builder: (context, setDialogState) {
               return AlertDialog(
@@ -1132,8 +1080,7 @@ class _EditarCitaModalState extends State<EditarCitaModal> {
                 title: const Text(
                   'Seleccionar hora',
                   textAlign: TextAlign.center,
-                  style:
-                      TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                 ),
                 content: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -1189,7 +1136,7 @@ class _EditarCitaModalState extends State<EditarCitaModal> {
                 ),
                 actions: [
                   TextButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () => Navigator.of(context).pop(),
                     child: Text('Cancelar',
                         style: TextStyle(color: Colors.grey[600])),
                   ),
@@ -1197,8 +1144,8 @@ class _EditarCitaModalState extends State<EditarCitaModal> {
                     onPressed: () {
                       final hour24 = (dialogHour % 12) +
                           (dialogPeriod == DayPeriod.pm ? 12 : 0);
-                      Navigator.pop(
-                          context, TimeOfDay(hour: hour24, minute: dialogMinute));
+                      Navigator.of(context).pop(
+                          TimeOfDay(hour: hour24, minute: dialogMinute));
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFD4748F),
