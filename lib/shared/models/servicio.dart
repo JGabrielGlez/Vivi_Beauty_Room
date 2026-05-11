@@ -22,6 +22,20 @@ class Servicio {
     required this.proximamente,
     required this.esCombo,
   });
+
+  factory Servicio.fromJson(Map<String, dynamic> json) {
+    return Servicio(
+      id: json['idServicio'] as String,
+      nombre: json['nombre'] as String,
+      descripcion: json['descripcion'] as String? ?? '',
+      precio: (json['precio'] as num).toDouble(),
+      duracionMin: json['duracionMin'] as int,
+      fotoURL: json['fotoUrl'] as String?,
+      activo: json['activo'] == 1,
+      proximamente: json['proximamente'] == 1,
+      esCombo: json['esCombo'] == 1,
+    );
+  }
 }
 
 const List<Servicio> serviciosMock = [
