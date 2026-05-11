@@ -179,6 +179,31 @@ class ApiClient {
     }
   }
 
+  Future<Map<String, dynamic>> getCitasDia(String fecha) async {
+    try {
+      final headers = await _authJsonHeaders();
+      final uri = Uri.parse('${ApiConfig.baseUrl}/agenda/citas/dia')
+          .replace(queryParameters: {'fecha': fecha});
+      final response = await http
+          .get(uri, headers: headers)
+          .timeout(ApiConfig.receiveTimeout,
+              onTimeout: () => throw Exception('Timeout en conexión'));
+
+      if (response.statusCode == 200) {
+        final decodedBody = jsonDecode(response.body);
+        final list = decodedBody is List ? decodedBody : <dynamic>[];
+        return {'success': true, 'data': list};
+      }
+      if (response.statusCode == 401) {
+        await _handleUnauthorized();
+        return {'success': false, 'statusCode': 401, 'error': 'Token inválido o expirado'};
+      }
+      return {'success': false, 'statusCode': response.statusCode, 'error': 'Error al cargar citas'};
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
   Future<Map<String, dynamic>> getCitasSemana(String inicio) async {
     try {
       final headers = await _authJsonHeaders();
@@ -415,6 +440,39 @@ class ApiClient {
         'success': false,
         'statusCode': response.statusCode,
         'error': errorData['error'] ?? 'No se pudo cambiar la contraseña',
+      };
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> editarCita(
+    String id,
+    Map<String, dynamic> campos,
+  ) async {
+    try {
+      final headers = await _authJsonHeaders();
+      final response = await http
+          .put(
+            Uri.parse('${ApiConfig.baseUrl}/agenda/citas/$id'),
+            headers: headers,
+            body: jsonEncode(campos),
+          )
+          .timeout(ApiConfig.connectionTimeout,
+              onTimeout: () => throw Exception('Timeout en conexión'));
+
+      if (response.statusCode == 200) {
+        return {'success': true};
+      }
+      if (response.statusCode == 401) {
+        await _handleUnauthorized();
+        return {'success': false, 'statusCode': 401, 'error': 'Token inválido o expirado'};
+      }
+      final errorData = jsonDecode(response.body);
+      return {
+        'success': false,
+        'statusCode': response.statusCode,
+        'error': errorData['error'] ?? 'Error al actualizar la cita',
       };
     } catch (e) {
       return {'success': false, 'error': e.toString()};

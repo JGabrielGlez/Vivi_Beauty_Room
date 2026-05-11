@@ -1,46 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../../core/services/api_client.dart';
 import '../../../shared/widgets/status_badge.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../../shared/widgets/secondary_button.dart';
 import '../../../shared/widgets/cliente_avatar.dart';
-import '../../../core/theme/app_colors.dart';
-import 'package:http/http.dart' as http;
-import 'agenda_screen.dart';
-
-String backendBaseUrl = const String.fromEnvironment('BACKEND_URL', defaultValue: 'http://localhost:3000');
-bool pago=true;
-String token="";
-Map<String,String> header = {'Content-Type': 'application/json','Authorization': 'Bearer $token'};
-
-// ─── MODELO TEMPORAL (sprint visual) ─────────────────────────────────────────
-// Reemplazar por el objeto Cita real de shared/models/ al integrar
-class _CitaMock {
-  final String nombreClienta;
-  final String servicio;
-  final DateTime fechaHora;
-  final int duracionMin;
-  final double montoAnticipo;
-  final bool tieneAlergia;
-  final String? notasAlergia;
-  final String notas;
-  String estado;
-  bool anticipoPagado;
-  final String id;
-
-  _CitaMock({
-    required this.nombreClienta,
-    required this.servicio,
-    required this.fechaHora,
-    required this.duracionMin,
-    required this.montoAnticipo,
-    required this.tieneAlergia,
-    this.notasAlergia,
-    required this.notas,
-    required this.estado,
-    required this.anticipoPagado,
-    required this.id,
-  });
-}
 
 // ─── PANTALLA ─────────────────────────────────────────────────────────────────
 class DetalleCitaScreen extends StatefulWidget {
@@ -58,7 +22,15 @@ class _DetalleCitaScreenState extends State<DetalleCitaScreen> {
   static const Color _negro = Color(0xFF1A1A1A);
   static const Color _grisOscuro = Color(0xFF666666);
 
+  late ApiClient _apiClient;
   late Map<String, dynamic> _cita;
+  bool _pago = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _apiClient = context.read<ApiClient>();
+  }
 
   @override
   void initState() {
@@ -73,9 +45,10 @@ class _DetalleCitaScreenState extends State<DetalleCitaScreen> {
       'notasAlergia': 'Alérgica al adhesivo de látex. Usar pegamento sin látex.',
       'notas': 'Cliente frecuente. Prefiere el acabado en L+.',
       'estado': 'PENDIENTE',
-      'anticipoPagado': false,
+      'anticipoPagado': 0,
+      'id': '',
     };
-    pago=_cita['anticipoPagado']==1;
+    _pago = _cita['anticipoPagado'] == 1;
   }
 
   String get _fechaFormateada {
@@ -118,84 +91,59 @@ class _DetalleCitaScreenState extends State<DetalleCitaScreen> {
   }
 
   Future<void> _marcarAnticipoRecibido() async {
+    final id = _cita['id']?.toString() ?? '';
+    if (id.isEmpty) return;
     try {
-      final response = await http.put(
-        Uri.parse('$backendBaseUrl/api/agenda/citas/${_cita['id']}'),
-        headers: header,
-        body: '{"anticipoPagado": 1}',
-      );
-      if (response.statusCode == 200) {
-        // Opcional: volver a cargar la cita desde el backend para asegurar datos frescos
+      final result = await _apiClient.editarCita(id, {'anticipoPagado': 1});
+      if (!mounted) return;
+      if (result['success'] == true) {
         _showSnack('Anticipo marcado como recibido');
-        setState(() {pago=!pago;});
-        Navigator.pushReplacement(context,MaterialPageRoute(builder: (_) =>const AgendaScreen()),);
+        Navigator.pop(context);
       } else {
-        _showSnack('Error al marcar anticipo: ${response.statusCode}');
+        _showSnack(result['error'] ?? 'Error al marcar anticipo');
       }
     } catch (e) {
-      _showSnack('Error de red: $e');
+      _showSnack('Error: $e');
     }
   }
 
-  Future<void> _refrescarCita() async {
-    try {
-      final response = await http.get(
-        Uri.parse('$backendBaseUrl/api/agenda/citas/${_cita['id']}'),
-        headers: header,
-      );
-      if (response.statusCode == 200) {
-        final nuevaCita = Map<String, dynamic>.from(
-          response.body.isNotEmpty ? (response.body.startsWith('{') ? (response.body as dynamic) : {}) : {}
-        );
-        setState(() {
-          _cita.addAll(nuevaCita);
-        });
-      }
-    } catch (_) {
-      // Silenciar error de refresco
-    }
-  }
   Future<void> _confirmarCita() async {
+    final id = _cita['id']?.toString() ?? '';
+    if (id.isEmpty) return;
     try {
-      final response = await http.put(
-        Uri.parse('$backendBaseUrl/api/agenda/citas/${_cita['id']}'),
-        headers: header,
-        body: '{"estado": "CONFIRMADA"}',
-      );
-      if (response.statusCode == 200) {
-        await _refrescarCita();
+      final result = await _apiClient.editarCita(id, {'estado': 'CONFIRMADA'});
+      if (!mounted) return;
+      if (result['success'] == true) {
         _showSnack('Cita confirmada');
-        Navigator.pushReplacement(context,MaterialPageRoute(builder: (_) =>const AgendaScreen()),);
+        Navigator.pop(context);
       } else {
-        _showSnack('Error al confirmar cita: ${response.statusCode}');
+        _showSnack(result['error'] ?? 'Error al confirmar cita');
       }
     } catch (e) {
-      _showSnack('Error de red: $e');
+      _showSnack('Error: $e');
     }
   }
+
   Future<void> _completarCita() async {
+    final id = _cita['id']?.toString() ?? '';
+    if (id.isEmpty) return;
     try {
-      final response = await http.put(
-        Uri.parse('$backendBaseUrl/api/agenda/citas/${_cita['id']}'),
-        headers: header,
-        body: '{"estado": "COMPLETADA"}',
-      );
-      if (response.statusCode == 200) {
-        setState(() {
-          _cita['estado'] = 'COMPLETADA';
-        });
+      final result = await _apiClient.editarCita(id, {'estado': 'COMPLETADA'});
+      if (!mounted) return;
+      if (result['success'] == true) {
         _showSnack('Cita marcada como completada');
-        Navigator.pushReplacement(context,MaterialPageRoute(builder: (_) =>const AgendaScreen()),);
-        
+        Navigator.pop(context);
       } else {
-        _showSnack('Error al completar cita: ${response.statusCode}');
+        _showSnack(result['error'] ?? 'Error al completar cita');
       }
     } catch (e) {
-      _showSnack('Error de red: $e');
+      _showSnack('Error: $e');
     }
   }
+
   void _reprogramarCita() =>
       _showSnack('Función de reprogramación próximamente');
+
   void _verPerfilClienta() =>
       _showSnack('Navegar al perfil de ${_cita['nombreClienta'] ?? ''}');
 
@@ -213,6 +161,7 @@ class _DetalleCitaScreenState extends State<DetalleCitaScreen> {
   Future<void> _mostrarModalCancelacion() async {
     final confirmar = await showDialog<bool>(
       context: context,
+      useRootNavigator: false,
       builder: (ctx) => AlertDialog(
         backgroundColor: _blanco,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -235,14 +184,14 @@ class _DetalleCitaScreenState extends State<DetalleCitaScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
+            onPressed: () => Navigator.of(ctx).pop(false),
             child: const Text(
               'Volver',
               style: TextStyle(fontFamily: 'Poppins', color: _grisOscuro),
             ),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
+            onPressed: () => Navigator.of(ctx).pop(true),
             child: const Text(
               'Sí, cancelar',
               style: TextStyle(
@@ -256,21 +205,19 @@ class _DetalleCitaScreenState extends State<DetalleCitaScreen> {
       ),
     );
     if (confirmar == true) {
+      final id = _cita['id']?.toString() ?? '';
+      if (id.isEmpty) return;
       try {
-        final response = await http.put(
-          Uri.parse('$backendBaseUrl/api/agenda/citas/${_cita['id']}'),
-          headers: header,
-          body: '{"estado": "CANCELADA"}',
-        );
-        if (response.statusCode == 200) {
-          await _refrescarCita();
+        final result = await _apiClient.editarCita(id, {'estado': 'CANCELADA'});
+        if (!mounted) return;
+        if (result['success'] == true) {
           _showSnack('Cita cancelada. Anticipo retenido.');
-          Navigator.pushReplacement(context,MaterialPageRoute(builder: (_) =>const AgendaScreen()),);
+          Navigator.pop(context);
         } else {
-          _showSnack('Error al cancelar cita: ${response.statusCode}');
+          _showSnack(result['error'] ?? 'Error al cancelar cita');
         }
       } catch (e) {
-        _showSnack('Error de red: $e');
+        _showSnack('Error: $e');
       }
     }
   }
@@ -314,8 +261,8 @@ class _DetalleCitaScreenState extends State<DetalleCitaScreen> {
               const SizedBox(height: 16),
             ],
             _TarjetaEncabezado(
-              nombreClienta: _cita['nombreClienta'].toString() ?? '',
-              servicio: _cita['servicio'] ?? '',
+              nombreClienta: _cita['nombreClienta']?.toString() ?? '',
+              servicio: _cita['servicio']?.toString() ?? '',
               fecha: _fechaFormateada,
               hora: _horaFormateada,
               duracionMin: _cita['duracionMin'] ?? _cita['duracion'] ?? 0,
@@ -325,10 +272,8 @@ class _DetalleCitaScreenState extends State<DetalleCitaScreen> {
             const SizedBox(height: 16),
             _TarjetaAnticipo(
               monto: (_cita['montoAnticipo'] ?? 0).toDouble(),
-              pagado: _cita['anticipoPagado'] == 1,
-              onMarcarRecibido: (_cita['anticipoPagado'] == 0)
-                  ? _marcarAnticipoRecibido
-                  : null,
+              pagado: _pago,
+              onMarcarRecibido: _pago ? null : _marcarAnticipoRecibido,
             ),
             const SizedBox(height: 16),
             if ((_cita['notas'] ?? '').toString().isNotEmpty) ...[
@@ -337,7 +282,7 @@ class _DetalleCitaScreenState extends State<DetalleCitaScreen> {
             ],
             _SeccionAcciones(
               estado: _cita['estado'] ?? '',
-              anticipoPagado: _cita['anticipoPagado'] == 1,
+              anticipoPagado: _pago,
               onConfirmar: _confirmarCita,
               onCompletar: _completarCita,
               onReprogramar: _reprogramarCita,
@@ -353,8 +298,6 @@ class _DetalleCitaScreenState extends State<DetalleCitaScreen> {
 
 // ─── SUB-WIDGETS ──────────────────────────────────────────────────────────────
 
-/// AlertBanner inline — cuando el widget global exista en shared/widgets/,
-/// reemplazar esta clase por el import correspondiente.
 class _AlertBanner extends StatelessWidget {
   final String texto;
   const _AlertBanner({required this.texto});
@@ -463,7 +406,6 @@ class _TarjetaEncabezado extends StatelessWidget {
                   ],
                 ),
               ),
-
             ],
           ),
           const SizedBox(height: 16),
@@ -691,7 +633,10 @@ class _SeccionAcciones extends StatelessWidget {
         ],
         // Completar: solo CONFIRMADA
         if (estado == 'CONFIRMADA') ...[
-          PrimaryButton(text: 'Marcar como completada', onPressed:pago?onCompletar: null),
+          PrimaryButton(
+            text: 'Marcar como completada',
+            onPressed: anticipoPagado ? onCompletar : null,
+          ),
           const SizedBox(height: 12),
         ],
         // Reprogramar: PENDIENTE o CONFIRMADA

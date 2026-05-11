@@ -12,11 +12,6 @@ import '../../../shared/widgets/search_bar_widget.dart';
 import '../screens/detalle_cita_screen.dart';
 import '../../citas/widgets/nueva_cita_modal.dart';
 import 'dart:developer' as _logger;
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-
-String token="";
-Map<String,String> header = {'Content-Type': 'application/json','Authorization': 'Bearer $token'};
 
 class AgendaScreen extends StatefulWidget {
   const AgendaScreen({super.key});
@@ -41,18 +36,23 @@ class _AgendaScreenState extends State<AgendaScreen> {
       }
       return result;
     }
-  // Configuración de la URL base del backend
-  static String backendBaseUrl = const String.fromEnvironment('BACKEND_URL', defaultValue: 'http://localhost:3000');
+  late ApiClient _apiClient;
   int index = 0;
   int selectedDayIndex = 0;
   late List<Map<String, String>> days = [];
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _apiClient = context.read<ApiClient>();
+  }
+
   @override
   void initState() {
     super.initState();
     days = _generateDays(DateTime.now());
     selectedDayIndex = days.indexWhere((d) => d['isToday'] == 'true');
     if (selectedDayIndex == -1) selectedDayIndex = 0;
-    fetchAppointmentsForDay(DateTime.now());
+    WidgetsBinding.instance.addPostFrameCallback((_) => fetchAppointmentsForDay(DateTime.now()));
   }
   Map<String,String>monts={
     '01':'Enero',
@@ -78,57 +78,31 @@ class _AgendaScreenState extends State<AgendaScreen> {
       isLoading = true;
       errorMsg = null;
     });
-    final String formattedDate = "${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
-    final url = Uri.parse("$backendBaseUrl/api/agenda/citas/dia?fecha=$formattedDate");
+    final String fecha =
+        '${date.year.toString().padLeft(4, '0')}-'
+        '${date.month.toString().padLeft(2, '0')}-'
+        '${date.day.toString().padLeft(2, '0')}';
 
-    try {
-      final response = await http.get(url,headers: header);
-      if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        appointments = data.map((e) => e as Map<String, dynamic>).toList();
-      }
-      else {
-        errorMsg = 'Error al cargar citas: \\${response.statusCode}';
-      }
-    } catch (e) {
-      errorMsg = 'Error de conexión: $e';
+    final result = await _apiClient.getCitasDia(fecha);
+    if (!mounted) return;
+
+    if (result['success'] == true) {
+      final List<dynamic> data = result['data'] as List<dynamic>;
+      setState(() {
+        appointments = data.whereType<Map<String, dynamic>>().toList();
+        isLoading = false;
+      });
+    } else {
+      setState(() {
+        errorMsg = result['error'] ?? 'Error al cargar citas';
+        isLoading = false;
+      });
     }
-    setState(() {
-      isLoading = false;
-    });
   }
+
   String extraerHora(String time) {
     final hora = time.split('T')[1];
-    return hora.split(':')[0]+":"+hora.split(':')[1];
-  }
-  Future<String> extraerCliente(String id) async {
-    try {
-      final response = await http.get(Uri.parse("$backendBaseUrl/api/clientas/$id"),headers: header);
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> data = json.decode(response.body);
-        // Ajusta el campo según la respuesta real del backend
-        return data['nombre'] ?? 'Sin nombre';
-      } else {
-        return response.body;
-      }
-    } catch (e) {
-      return 'Error';
-    }
-  }
-
-  Future<String> extraerServicio(String id) async {
-    try {
-      final response = await http.get(Uri.parse("$backendBaseUrl/api/servicios/$id"));
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> data = json.decode(response.body);
-        // Ajusta el campo según la respuesta real del backend
-        return data['nombre'] ?? 'Sin nombre';
-      } else {
-        return response.body;
-      }
-    } catch (e) {
-      return 'Error';
-    }
+    return '${hora.split(':')[0]}:${hora.split(':')[1]}';
   }
 
   String _weekdayShort(int weekday) {
@@ -367,49 +341,44 @@ class _AgendaScreenState extends State<AgendaScreen> {
                         ? Center(child: Text(errorMsg!))
                         : ListView(
                             children: [
-                              //Text(appointments.toString()),
                               for (var i = 0; i < appointments.length; i++)
-                                FutureBuilder<String>(
-                                  future: appointments[i]['idClienta'] != null
-                                      ? extraerCliente(appointments[i]['idClienta'].toString())
-                                      : Future.value('Desconocido'),
-                                  builder: (context, clienteSnapshot) {
-                                    return FutureBuilder<String>(
-                                      future: appointments[i]['idServicio'] != null
-                                          ? extraerServicio(appointments[i]['idServicio'].toString())
-                                          : Future.value('Desconocido'),
-                                      builder: (context, servicioSnapshot) {
-                                        return GestureDetector(
-                                          onTap: () async {
-                                            final cliente = clienteSnapshot.data ?? 'Cargando...';
-                                            final servicio = servicioSnapshot.data ?? 'Cargando...';
-                                            final citaData = {
-                                              ...appointments[i],
-                                              'nombreClienta': cliente,
-                                              'servicio': servicio,
-                                              'id': appointments[i]['idCita'] ?? '',
-                                            };
-                                            await showModalBottomSheet(
-                                              context: context,
-                                              isScrollControlled: true,
-                                              backgroundColor: Colors.transparent,
-                                              builder: (context) => DetalleCitaScreen(citaData: citaData),
-                                            );
-                                          },
-                                          child: _agendaCard(
-                                            time: extraerHora(appointments[i]['fechaHora']) ?? '',
-                                            nombre: clienteSnapshot.data ?? 'Cargando...',
-                                            servicio: servicioSnapshot.data ?? 'Cargando...',
-                                            duracion: appointments[i]['duracion']?.toString() ?? '',
-                                            status: appointments[i]['estado'] ?? appointments[i]['status'] ?? '',
-                                          ),
-                                        );
-                                      },
+                                GestureDetector(
+                                  onTap: () async {
+                                    await showModalBottomSheet(
+                                      context: context,
+                                      isScrollControlled: true,
+                                      backgroundColor: Colors.transparent,
+                                      builder: (context) => DetalleCitaScreen(
+                                        citaData: {
+                                          ...appointments[i],
+                                          'nombreClienta': appointments[i]['nombreCliente'] ?? '',
+                                          'servicio': appointments[i]['nombreServicio'] ?? '',
+                                          'id': appointments[i]['idCita'] ?? '',
+                                        },
+                                      ),
+                                    );
+                                    fetchAppointmentsForDay(
+                                      DateTime.parse(days[selectedDayIndex]['fullDate']!),
                                     );
                                   },
+                                  child: _agendaCard(
+                                    time: extraerHora(appointments[i]['fechaHora'] ?? ''),
+                                    nombre: appointments[i]['nombreCliente'] ?? 'Sin cliente',
+                                    servicio: appointments[i]['nombreServicio'] ?? '',
+                                    duracion: appointments[i]['duracion']?.toString() ?? '',
+                                    status: appointments[i]['estado'] ?? '',
+                                  ),
                                 ),
                               if (appointments.isEmpty)
-                                const Center(child: Text('No hay citas para este día.')),
+                                const Padding(
+                                  padding: EdgeInsets.only(top: 40),
+                                  child: Center(
+                                    child: Text(
+                                      'No hay citas para este día.',
+                                      style: TextStyle(color: Color(0xFFB0B7C3)),
+                                    ),
+                                  ),
+                                ),
                             ],
                           ),
               ),
