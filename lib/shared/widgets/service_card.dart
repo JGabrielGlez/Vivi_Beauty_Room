@@ -68,12 +68,11 @@ class ServiceCard extends StatelessWidget {
 
                   const Spacer(),
 
-                  if (servicio.proximamente)
-                    const _BadgeProximamente()
-                  else
                     Row(
                       children: [
-                        Flexible(child: _BotonAgendar(onTap: onAgendar)),
+                        if (!servicio.proximamente)
+                          Flexible(child: _BotonAgendar(onTap: onAgendar)),
+                        if (servicio.proximamente) const _BadgeProximamente(),
                         if (onEditar != null) ...[
                           const SizedBox(width: 8),
                           IconButton(

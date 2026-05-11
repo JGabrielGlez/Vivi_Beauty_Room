@@ -16,7 +16,20 @@ router.get('/proximamente', (req, res) => {
     res.status(500).json({ error: 'Error al obtener servicios próximamente' });
   }
 });
-
+//INACTIVOS
+// GET /api/servicios/inactivos
+router.get('/inactivos', (req, res) => {
+  try {
+    const servicios = db.prepare(`
+      SELECT * FROM servicios
+      WHERE activo = 0
+      ORDER BY nombre ASC
+    `).all();
+    res.json(servicios);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener servicios inactivos' });
+  }
+});
 // GET /api/servicios/combos
 router.get('/combos', (req, res) => {
   try {
@@ -75,7 +88,7 @@ router.get('/:id', (req, res) => {
 });
 
 // POST /api/servicios
-router.post('/', soloAdmin, (req, res) => {
+router.post('/', (req, res) => {
   try {
     const {
       nombre,
@@ -123,7 +136,7 @@ router.post('/', soloAdmin, (req, res) => {
 });
 
 // PUT /api/servicios/:id
-router.put('/:id', soloAdmin, (req, res) => {
+router.put('/:id', (req, res) => {
   try {
     const servicio = db.prepare(`
       SELECT * FROM servicios WHERE idServicio = ?
@@ -180,7 +193,7 @@ router.put('/:id', soloAdmin, (req, res) => {
   }
 });
 // DELETE /api/servicios/:id
-router.delete('/:id', soloAdmin, (req, res) => {
+router.delete('/:id', (req, res) => {
   try {
     const servicio = db.prepare(`
       SELECT * FROM servicios WHERE idServicio = ?
