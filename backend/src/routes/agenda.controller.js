@@ -1,6 +1,7 @@
 const db = require("../db/schema");
+const gcal = require("../services/googleCalendar.service");
 
-exports.crearCita = (req, res) => {
+exports.crearCita = async (req, res) => {
   const {
     idClienta,
     idServicio,
@@ -20,18 +21,47 @@ exports.crearCita = (req, res) => {
   ) VALUES (?, ?, ?, ?, 'PENDIENTE', ?, ?, ?)`;
 
   try {
-    const stmt = db.prepare(sql);
-    const info = stmt.run(
-      idClienta,
-      idServicio,
-      fechaHora,
-      duracion,
-      montoAnticipo,
-      anticipoPagado,
-      notas,
-    );
+    const info = db
+      .prepare(sql)
+      .run(
+        idClienta,
+        idServicio,
+        fechaHora,
+        duracion,
+        montoAnticipo,
+        anticipoPagado,
+        notas,
+      );
+
+    const { idCita } = db
+      .prepare("SELECT idCita FROM citas WHERE rowid = ?")
+      .get(info.lastInsertRowid);
+
+    try {
+      const servicio = db
+        .prepare("SELECT nombre FROM servicios WHERE idServicio = ?")
+        .get(idServicio);
+      const clienta = idClienta
+        ? db
+            .prepare("SELECT nombre FROM clientas WHERE idClienta = ?")
+            .get(idClienta)
+        : null;
+
+      const googleEventId = await gcal.createEvent(
+        { idCita, fechaHora, duracion, notas, estado: "PENDIENTE", montoAnticipo, anticipoPagado },
+        servicio?.nombre || "Servicio",
+        clienta?.nombre || null,
+      );
+
+      if (googleEventId) {
+        db.prepare("UPDATE citas SET googleCalendarEventId = ? WHERE idCita = ?").run(googleEventId, idCita);
+      }
+    } catch (gcErr) {
+      console.error("[GoogleCalendar] Error creando evento:", gcErr.message);
+    }
+
     res.status(201).json({
-      idCita: info.lastInsertRowid,
+      idCita,
       idClienta,
       idServicio,
       fechaHora,
@@ -56,7 +86,6 @@ exports.obtenerCitas = (req, res) => {
   }
 };
 
-
 exports.obtenerCitasHoy = (req, res) => {
   const hoy = new Date();
   const yyyy = hoy.getFullYear();
@@ -72,14 +101,13 @@ exports.obtenerCitasHoy = (req, res) => {
   }
 };
 
-// Obtener citas por día específico con nombre de cliente y servicio
 exports.obtenerCitasPorDia = (req, res) => {
   const { fecha } = req.query;
   if (!fecha) {
     return res.status(400).json({ error: 'Parámetro "fecha" requerido en formato YYYY-MM-DD' });
   }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
-    return res.status(400).json({ error: 'Formato de fecha inválido. Use YYYY-MM-DD' });
+    return res.status(400).json({ error: "Formato de fecha inválido. Use YYYY-MM-DD" });
   }
   const sql = `
     SELECT
@@ -109,20 +137,14 @@ exports.obtenerCitasPorDia = (req, res) => {
   }
 };
 
-// Obtener citas de los 7 días a partir de la fecha de inicio
 exports.obtenerCitasSemana = (req, res) => {
   const inicio = req.query.inicio;
   if (!inicio) {
-    return res
-      .status(400)
-      .json({ error: 'Parámetro "inicio" requerido en formato YYYY-MM-DD' });
+    return res.status(400).json({ error: 'Parámetro "inicio" requerido en formato YYYY-MM-DD' });
   }
-  // Calcular fecha final (7 días)
   const fechaInicio = new Date(inicio);
   if (isNaN(fechaInicio.getTime())) {
-    return res
-      .status(400)
-      .json({ error: "Formato de fecha inválido. Use YYYY-MM-DD" });
+    return res.status(400).json({ error: "Formato de fecha inválido. Use YYYY-MM-DD" });
   }
   const fechaFin = new Date(fechaInicio);
   fechaFin.setDate(fechaFin.getDate() + 7);
@@ -139,8 +161,6 @@ exports.obtenerCitasSemana = (req, res) => {
   }
 };
 
-
-// Obtener detalle de una cita por id
 exports.obtenerCitaPorId = (req, res) => {
   const id = req.params.id;
   if (!id) {
@@ -158,8 +178,7 @@ exports.obtenerCitaPorId = (req, res) => {
   }
 };
 
-// Editar datos de una cita por id
-exports.editarCitaPorId = (req, res) => {
+exports.editarCitaPorId = async (req, res) => {
   const id = req.params.id;
   const {
     idClienta,
@@ -178,38 +197,14 @@ exports.editarCitaPorId = (req, res) => {
 
   const campos = [];
   const valores = [];
-  if (idClienta !== undefined) {
-    campos.push("idClienta = ?");
-    valores.push(idClienta);
-  }
-  if (idServicio !== undefined) {
-    campos.push("idServicio = ?");
-    valores.push(idServicio);
-  }
-  if (fechaHora !== undefined) {
-    campos.push("fechaHora = ?");
-    valores.push(fechaHora);
-  }
-  if (duracion !== undefined) {
-    campos.push("duracion = ?");
-    valores.push(duracion);
-  }
-  if (estado !== undefined) {
-    campos.push("estado = ?");
-    valores.push(estado);
-  }
-  if (montoAnticipo !== undefined) {
-    campos.push("montoAnticipo = ?");
-    valores.push(montoAnticipo);
-  }
-  if (anticipoPagado !== undefined) {
-    campos.push("anticipoPagado = ?");
-    valores.push(anticipoPagado);
-  }
-  if (notas !== undefined) {
-    campos.push("notas = ?");
-    valores.push(notas);
-  }
+  if (idClienta !== undefined) { campos.push("idClienta = ?"); valores.push(idClienta); }
+  if (idServicio !== undefined) { campos.push("idServicio = ?"); valores.push(idServicio); }
+  if (fechaHora !== undefined) { campos.push("fechaHora = ?"); valores.push(fechaHora); }
+  if (duracion !== undefined) { campos.push("duracion = ?"); valores.push(duracion); }
+  if (estado !== undefined) { campos.push("estado = ?"); valores.push(estado); }
+  if (montoAnticipo !== undefined) { campos.push("montoAnticipo = ?"); valores.push(montoAnticipo); }
+  if (anticipoPagado !== undefined) { campos.push("anticipoPagado = ?"); valores.push(anticipoPagado); }
+  if (notas !== undefined) { campos.push("notas = ?"); valores.push(notas); }
 
   if (campos.length === 0) {
     return res.status(400).json({ error: "No hay campos para actualizar" });
@@ -219,30 +214,84 @@ exports.editarCitaPorId = (req, res) => {
   valores.push(id);
 
   try {
-    const stmt = db.prepare(sql);
-    const info = stmt.run(...valores);
+    const citaAntes = db.prepare("SELECT * FROM citas WHERE idCita = ?").get(id);
+    if (!citaAntes) {
+      return res.status(404).json({ error: "Cita no encontrada" });
+    }
+
+    const info = db.prepare(sql).run(...valores);
     if (info.changes === 0) {
       return res.status(404).json({ error: "Cita no encontrada" });
     }
+
+    try {
+      const citaDespues = db.prepare("SELECT * FROM citas WHERE idCita = ?").get(id);
+      const nuevoEstado = citaDespues.estado;
+      const googleEventId = citaAntes.googleCalendarEventId;
+
+      if (nuevoEstado === "CANCELADA") {
+        if (googleEventId) await gcal.deleteEvent(googleEventId);
+      } else {
+        const servicio = db
+          .prepare("SELECT nombre FROM servicios WHERE idServicio = ?")
+          .get(citaDespues.idServicio);
+        const clienta = citaDespues.idClienta
+          ? db.prepare("SELECT nombre FROM clientas WHERE idClienta = ?").get(citaDespues.idClienta)
+          : null;
+
+        if (googleEventId) {
+          await gcal.updateEvent(
+            googleEventId,
+            citaDespues,
+            servicio?.nombre || "Servicio",
+            clienta?.nombre || null,
+          );
+        } else {
+          const newEventId = await gcal.createEvent(
+            citaDespues,
+            servicio?.nombre || "Servicio",
+            clienta?.nombre || null,
+          );
+          if (newEventId) {
+            db.prepare("UPDATE citas SET googleCalendarEventId = ? WHERE idCita = ?").run(newEventId, id);
+          }
+        }
+      }
+    } catch (gcErr) {
+      console.error("[GoogleCalendar] Error actualizando evento:", gcErr.message);
+    }
+
     res.json({ mensaje: "Cita actualizada correctamente" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
-// Cancelar una cita por id (cambiar estado a 'CANCELADA')
-exports.cancelarCitaPorId = (req, res) => {
+exports.cancelarCitaPorId = async (req, res) => {
   const id = req.params.id;
   if (!id) {
     return res.status(400).json({ error: "ID de cita requerido" });
   }
+
   const sql = `UPDATE citas SET estado = 'CANCELADA' WHERE idCita = ?`;
   try {
-    const stmt = db.prepare(sql);
-    const info = stmt.run(id);
+    const cita = db
+      .prepare("SELECT googleCalendarEventId FROM citas WHERE idCita = ?")
+      .get(id);
+
+    const info = db.prepare(sql).run(id);
     if (info.changes === 0) {
       return res.status(404).json({ error: "Cita no encontrada" });
     }
+
+    try {
+      if (cita?.googleCalendarEventId) {
+        await gcal.deleteEvent(cita.googleCalendarEventId);
+      }
+    } catch (gcErr) {
+      console.error("[GoogleCalendar] Error eliminando evento:", gcErr.message);
+    }
+
     res.json({ mensaje: "Cita cancelada correctamente" });
   } catch (err) {
     res.status(500).json({ error: err.message });
