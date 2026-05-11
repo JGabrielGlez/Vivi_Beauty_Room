@@ -44,6 +44,7 @@ app.*.map.json
 
 #Instrucciones de lo que se debe de hacer para el backend
 backend_viviana.md
+tickets/
 # Android Studio will place build artifacts here
 /android/app/debug
 /android/app/profile
@@ -54,3 +55,14 @@ database.db
 
 # Variables de entorno
 
+# --- Flutter Generated Files ---
+# Archivos generados de plataformas
+linux/flutter/generated_plugin_registrant.*
+linux/flutter/generated_plugins.cmake
+macos/Flutter/GeneratedPluginRegistrant.swift
+windows/flutter/generated_plugin_registrant.*
+windows/flutter/generated_plugins.cmake
+**/flutter_export_environment.sh
+**/GeneratedPluginRegistrant.h
+**/GeneratedPluginRegistrant.m
+windows/flutter/generated_plugins.cmake

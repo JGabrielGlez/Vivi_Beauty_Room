@@ -56,6 +56,7 @@ exports.obtenerCitas = (req, res) => {
   }
 };
 
+
 exports.obtenerCitasHoy = (req, res) => {
   const hoy = new Date();
   const yyyy = hoy.getFullYear();
@@ -65,6 +66,43 @@ exports.obtenerCitasHoy = (req, res) => {
   const sql = `SELECT * FROM citas WHERE date(fechaHora) = ? ORDER BY time(fechaHora)`;
   try {
     const rows = db.prepare(sql).all(fechaHoy);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Obtener citas por día específico con nombre de cliente y servicio
+exports.obtenerCitasPorDia = (req, res) => {
+  const { fecha } = req.query;
+  if (!fecha) {
+    return res.status(400).json({ error: 'Parámetro "fecha" requerido en formato YYYY-MM-DD' });
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+    return res.status(400).json({ error: 'Formato de fecha inválido. Use YYYY-MM-DD' });
+  }
+  const sql = `
+    SELECT
+      c.idCita,
+      c.idClienta,
+      c.idServicio,
+      c.fechaHora,
+      c.duracion,
+      c.estado,
+      c.montoAnticipo,
+      c.anticipoPagado,
+      c.notas,
+      c.creadaEn,
+      COALESCE(cl.nombre, 'Sin cliente') AS nombreCliente,
+      s.nombre                            AS nombreServicio
+    FROM citas c
+    LEFT JOIN clientas cl ON c.idClienta = cl.idClienta
+    JOIN servicios s      ON c.idServicio = s.idServicio
+    WHERE date(c.fechaHora) = ?
+    ORDER BY time(c.fechaHora)
+  `;
+  try {
+    const rows = db.prepare(sql).all(fecha);
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -101,35 +139,6 @@ exports.obtenerCitasSemana = (req, res) => {
   }
 };
 
-// Obtener citas de los 7 días a partir de la fecha de inicio
-exports.obtenerCitasSemana = (req, res) => {
-  const inicio = req.query.inicio;
-  if (!inicio) {
-    return res
-      .status(400)
-      .json({ error: 'Parámetro "inicio" requerido en formato YYYY-MM-DD' });
-  }
-  // Calcular fecha final (7 días)
-  const fechaInicio = new Date(inicio);
-  if (isNaN(fechaInicio.getTime())) {
-    return res
-      .status(400)
-      .json({ error: "Formato de fecha inválido. Use YYYY-MM-DD" });
-  }
-  const fechaFin = new Date(fechaInicio);
-  fechaFin.setDate(fechaFin.getDate() + 7);
-  const yyyyFin = fechaFin.getFullYear();
-  const mmFin = String(fechaFin.getMonth() + 1).padStart(2, "0");
-  const ddFin = String(fechaFin.getDate()).padStart(2, "0");
-  const finStr = `${yyyyFin}-${mmFin}-${ddFin}`;
-  const sql = `SELECT * FROM citas WHERE date(fechaHora) >= ? AND date(fechaHora) < ? ORDER BY fechaHora`;
-  db.all(sql, [inicio, finStr], (err, rows) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    res.json(rows);
-  });
-};
 
 // Obtener detalle de una cita por id
 exports.obtenerCitaPorId = (req, res) => {

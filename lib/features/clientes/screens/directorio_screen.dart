@@ -1,19 +1,117 @@
 import 'package:flutter/material.dart';
-import '../../../../shared/widgets/app_bottom_nav_bar.dart';
+import 'package:provider/provider.dart';
+import 'package:vivi_room/core/services/api_client.dart';
+import 'package:vivi_room/features/clientes/models/clienta_model.dart';
+import 'package:vivi_room/features/clientes/providers/clientas_provider.dart';
+import 'package:vivi_room/features/clientes/screens/detalle_clienta_screen.dart';
+import 'package:vivi_room/features/clientes/widgets/nueva_clienta_modal.dart';
 import '../../../../shared/widgets/cliente_avatar.dart';
 import '../../../../shared/widgets/search_bar_widget.dart';
 import '../../../../shared/widgets/fab_button.dart';
 
 // Pantalla principal del directorio de clientas - Rocío
-class DirectorioScreen extends StatefulWidget {
+class DirectorioScreen extends StatelessWidget {
   const DirectorioScreen({super.key});
 
   @override
-  State<DirectorioScreen> createState() => _DirectorioScreenState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider<ClientasProvider>(
+      create: (context) =>
+          ClientasProvider(apiClient: context.read<ApiClient>())
+            ..fetchClientas(),
+      child: const _DirectorioScreenView(),
+    );
+  }
 }
 
-class _DirectorioScreenState extends State<DirectorioScreen> {
+class _DirectorioScreenView extends StatefulWidget {
+  const _DirectorioScreenView();
+
+  @override
+  State<_DirectorioScreenView> createState() => _DirectorioScreenViewState();
+}
+
+class _DirectorioScreenViewState extends State<_DirectorioScreenView> {
   final _searchController = TextEditingController();
+
+  Future<void> _abrirDetalle(Clienta clienta) async {
+    final editada = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => DetalleClientaScreen(clienta: clienta),
+      ),
+    );
+    if (editada == true && mounted) {
+      context.read<ClientasProvider>().fetchClientas();
+    }
+  }
+
+  Future<void> _confirmarEliminacion(Clienta clienta) async {
+    final provider = context.read<ClientasProvider>();
+
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirmar desactivación'),
+        content: const Text(
+          '¿Desactivar esta clienta? Su historial de citas se conservará.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text(
+              'Desactivar',
+              style: TextStyle(color: Color(0xFFD4748F)),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmado != true) return;
+
+    final exito = await provider.eliminarClienta(clienta.idClienta);
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          exito
+              ? 'Clienta desactivada correctamente.'
+              : 'Error al desactivar la clienta.',
+        ),
+        backgroundColor:
+            exito ? const Color(0xFFE8A0B4) : const Color(0xFFD4748F),
+      ),
+    );
+  }
+
+  Future<void> _openNuevaClientaModal() async {
+    final clientasProvider = context.read<ClientasProvider>();
+
+    final creada = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => ChangeNotifierProvider<ClientasProvider>.value(
+        value: clientasProvider,
+        child: const NuevaClientaModal(),
+      ),
+    );
+
+    if (creada == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Clienta registrada correctamente.'),
+          backgroundColor: Color(0xFFE8A0B4),
+        ),
+      );
+    }
+  }
 
   @override
   void dispose() {
@@ -23,10 +121,20 @@ class _DirectorioScreenState extends State<DirectorioScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final provider = context.watch<ClientasProvider>();
+    final filtered = provider.filteredClientas;
+    final conConfirmada = filtered
+        .where((c) => c.ultimaCitaConfirmada != null && c.ultimaCitaConfirmada!.isNotEmpty)
+        .toList()
+      ..sort((a, b) => b.ultimaCitaConfirmada!.compareTo(a.ultimaCitaConfirmada!));
+    final recientes = conConfirmada.take(3).toList();
+    final recientesIds = recientes.map((c) => c.idClienta).toSet();
+    final todas = filtered.where((c) => !recientesIds.contains(c.idClienta)).toList();
+
     return Scaffold(
       backgroundColor: const Color(0xFFFAF8F8),
       // Botón flotante para agregar una nueva clienta
-      floatingActionButton: FabButton(onPressed: () {}),
+      floatingActionButton: FabButton(onPressed: _openNuevaClientaModal),
       body: Column(
         children: [
           // Encabezado rosado con el título de la pantalla
@@ -66,59 +174,99 @@ class _DirectorioScreenState extends State<DirectorioScreen> {
                     SearchBarWidget(
                       controller: _searchController,
                       hintText: 'Buscar clienta...',
+                      onChanged: provider.setSearchQuery,
                     ),
 
                     const SizedBox(height: 16),
 
                     // Lista de clientas dividida por secciones
-                    Expanded(
-                      child: ListView(
-                        padding: EdgeInsets.zero,
-                        children: [
-                          // Clientas vistas recientemente
-                          const _SectionLabel('RECIENTES'),
-                          const SizedBox(height: 8),
-                          const _ClienteRow(
-                            nombre: 'Sofía Ramírez',
-                            info: '14 ene · Pestañas clásicas',
-                          ),
-                          const _ClienteRow(
-                            nombre: 'Mariana Lopez',
-                            info: '2 feb · Maquillaje social',
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          // Todas las clientas registradas
-                          const _SectionLabel('TODAS'),
-                          const SizedBox(height: 8),
-                          const _ClienteRow(
-                            nombre: 'Daniela Morales',
-                            info: '8 ene · Laminado de cejas',
-                          ),
-                          const _ClienteRow(
-                            nombre: 'Janeth Lopez',
-                            info: '2 feb · Maquillaje social',
-                          ),
-                          const _ClienteRow(
-                            nombre: 'Sofía Ramírez',
-                            info: '14 ene · Pestañas clásicas',
-                          ),
-
-                          const SizedBox(height: 16),
-                        ],
-                      ),
-                    ),
+                    Expanded(child: _buildBody(provider, recientes, todas)),
                   ],
                 ),
               ),
             ),
           ),
-
-        
         ],
       ),
     );
+  }
+
+  Widget _buildBody(
+    ClientasProvider provider,
+    List<Clienta> recientes,
+    List<Clienta> todas,
+  ) {
+    if (provider.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    final hasData = recientes.isNotEmpty || todas.isNotEmpty;
+
+    if (!hasData) {
+      final message = provider.searchQuery.trim().isNotEmpty
+          ? 'No se encontraron clientas con ese filtro'
+          : 'Aun no hay clientas registradas';
+
+      return Center(
+        child: Text(
+          message,
+          style: const TextStyle(color: Color(0xFF888888), fontSize: 14),
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () => provider.fetchClientas(),
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          if (provider.errorMessage != null) ...[
+            Text(
+              provider.errorMessage!,
+              style: const TextStyle(
+                color: Color(0xFFD4748F),
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+          if (recientes.isNotEmpty) ...[
+            const _SectionLabel('RECIENTES'),
+            const SizedBox(height: 8),
+            ...recientes.map(
+              (clienta) => _ClienteRow(
+                clienta: clienta,
+                info: _clientaInfo(clienta),
+                onEliminar: () => _confirmarEliminacion(clienta),
+                onTap: () => _abrirDetalle(clienta),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+          if (todas.isNotEmpty) ...[
+            const _SectionLabel('TODAS'),
+            const SizedBox(height: 8),
+            ...todas.map(
+              (clienta) => _ClienteRow(
+                clienta: clienta,
+                info: _clientaInfo(clienta),
+                onEliminar: () => _confirmarEliminacion(clienta),
+                onTap: () => _abrirDetalle(clienta),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _clientaInfo(Clienta clienta) {
+    if (clienta.ultimaVisita == null || clienta.ultimaVisita!.isEmpty) {
+      return 'Sin citas completadas';
+    }
+    return 'Ultima visita: ${clienta.ultimaVisita}';
   }
 }
 
@@ -145,57 +293,74 @@ class _SectionLabel extends StatelessWidget {
 
 // Tarjeta individual de cada clienta con avatar, nombre y última cita
 class _ClienteRow extends StatelessWidget {
-  const _ClienteRow({required this.nombre, required this.info});
-  final String nombre;
+  const _ClienteRow({
+    required this.clienta,
+    required this.info,
+    required this.onEliminar,
+    required this.onTap,
+  });
+  final Clienta clienta;
   final String info;
+  final VoidCallback onEliminar;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 4,
             offset: const Offset(0, 1),
           ),
         ],
       ),
-      child: Row(
-        children: [
-          // Círculo con la inicial del nombre de la clienta
-          ClienteAvatar(nombre: nombre),
-          const SizedBox(width: 12),
-          // Nombre y detalle de su última cita
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  nombre,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                    color: Color(0xFF1A1A1A),
-                  ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              ClienteAvatar(nombre: clienta.nombre),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      clienta.nombre,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: Color(0xFF1A1A1A),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      info,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF888888),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  info,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF888888),
-                  ),
-                ),
-              ],
-            ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline, color: Color(0xFFD4748F), size: 20),
+                onPressed: onEliminar,
+                tooltip: 'Desactivar clienta',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ],
           ),
-          const Icon(Icons.chevron_right, color: Color(0xFFCCCCCC), size: 20),
-        ],
+        ),
       ),
     );
   }

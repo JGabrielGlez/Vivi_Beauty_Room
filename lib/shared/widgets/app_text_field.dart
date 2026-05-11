@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class AppTextField extends StatelessWidget {
   final String label;
@@ -7,6 +8,8 @@ class AppTextField extends StatelessWidget {
   final bool obscureText;
   final TextInputType? keyboardType;
   final ValueChanged<String>? onChanged;
+  final int? maxLength;
+  final List<TextInputFormatter>? inputFormatters;
 
   const AppTextField({
     Key? key,
@@ -16,6 +19,8 @@ class AppTextField extends StatelessWidget {
     this.obscureText = false,
     this.keyboardType,
     this.onChanged,
+    this.maxLength,
+    this.inputFormatters,
   }) : super(key: key);
 
   static const Color borderColor = Color(0xFFCCCCCC);
@@ -28,6 +33,8 @@ class AppTextField extends StatelessWidget {
       obscureText: obscureText,
       keyboardType: keyboardType,
       onChanged: onChanged,
+      maxLength: maxLength,
+      inputFormatters: inputFormatters,
       style: const TextStyle(
         fontFamily: 'Poppins',
         fontWeight: FontWeight.w500, // Medium
@@ -50,7 +57,10 @@ class AppTextField extends StatelessWidget {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: errorText == null ? borderColor : errorColor, width: 2),
+          borderSide: BorderSide(
+            color: errorText == null ? borderColor : errorColor,
+            width: 2,
+          ),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -66,7 +76,10 @@ class AppTextField extends StatelessWidget {
           fontFamily: 'Poppins',
           fontWeight: FontWeight.w500,
         ),
-        contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: 16,
+          horizontal: 16,
+        ),
       ),
     );
   }

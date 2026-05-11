@@ -26,10 +26,20 @@ db.prepare(
     alergias     TEXT,
     preferencias TEXT,
     notas        TEXT,
+    eliminada    INTEGER NOT NULL DEFAULT 0,
     creadaEn     TEXT DEFAULT (datetime('now'))
   )
 `,
 ).run();
+
+// Migración segura: añade columna eliminada si la tabla ya existía sin ella
+const colsClienta = db.prepare("PRAGMA table_info(clientas)").all();
+if (!colsClienta.some((c) => c.name === "eliminada")) {
+  db.prepare(
+    "ALTER TABLE clientas ADD COLUMN eliminada INTEGER NOT NULL DEFAULT 0",
+  ).run();
+  console.log("Migración: columna 'eliminada' añadida a clientas");
+}
 
 // Servicios
 db.prepare(

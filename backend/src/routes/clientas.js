@@ -3,8 +3,7 @@ const express = require("express");
 const router = express.Router();
 const db = require("../db/schema");
 
-// aquí van los endpoints
-// RF-04.1 y RF-04.2 — Listar y buscar clientas
+// RF-04.1 y RF-04.2 — Listar y buscar clientas (solo activas)
 router.get("/", (req, res) => {
   const { q } = req.query;
 
@@ -17,9 +16,13 @@ router.get("/", (req, res) => {
       SELECT c.*,
         (SELECT fechaHora FROM citas
          WHERE idClienta = c.idClienta AND estado = 'COMPLETADA'
-         ORDER BY fechaHora DESC LIMIT 1) AS ultimaVisita
+         ORDER BY fechaHora DESC LIMIT 1) AS ultimaVisita,
+        (SELECT fechaHora FROM citas
+         WHERE idClienta = c.idClienta AND estado = 'CONFIRMADA'
+         ORDER BY fechaHora DESC LIMIT 1) AS ultimaCitaConfirmada
       FROM clientas c
-      WHERE c.nombre LIKE ? OR c.telefono LIKE ?
+      WHERE c.eliminada = 0
+        AND (c.nombre LIKE ? OR c.telefono LIKE ?)
       ORDER BY c.nombre ASC
     `,
       )
@@ -31,8 +34,12 @@ router.get("/", (req, res) => {
       SELECT c.*,
         (SELECT fechaHora FROM citas
          WHERE idClienta = c.idClienta AND estado = 'COMPLETADA'
-         ORDER BY fechaHora DESC LIMIT 1) AS ultimaVisita
+         ORDER BY fechaHora DESC LIMIT 1) AS ultimaVisita,
+        (SELECT fechaHora FROM citas
+         WHERE idClienta = c.idClienta AND estado = 'CONFIRMADA'
+         ORDER BY fechaHora DESC LIMIT 1) AS ultimaCitaConfirmada
       FROM clientas c
+      WHERE c.eliminada = 0
       ORDER BY c.nombre ASC
     `,
       )
@@ -42,23 +49,20 @@ router.get("/", (req, res) => {
   return res.json(clientas);
 });
 
-// RF-04.3 — Perfil completo de una clienta
+// RF-04.3 — Perfil completo (404 si eliminada)
 router.get("/:id", (req, res) => {
   const clienta = db
-    .prepare(
-      `
-    SELECT * FROM clientas WHERE idClienta = ?
-  `,
-    )
+    .prepare("SELECT * FROM clientas WHERE idClienta = ?")
     .get(req.params.id);
 
-  if (!clienta) {
+  if (!clienta || clienta.eliminada === 1) {
     return res.status(404).json({ error: "Clienta no encontrada" });
   }
 
   return res.json(clienta);
 });
-// RF-04.4 — Historial de citas de la clienta
+
+// RF-04.4 — Historial de citas (disponible aunque esté eliminada)
 router.get("/:id/historial", (req, res) => {
   const clienta = db
     .prepare("SELECT * FROM clientas WHERE idClienta = ?")
@@ -71,7 +75,7 @@ router.get("/:id/historial", (req, res) => {
   const historial = db
     .prepare(
       `
-    SELECT 
+    SELECT
       c.idCita,
       c.fechaHora,
       c.estado,
@@ -89,7 +93,7 @@ router.get("/:id/historial", (req, res) => {
   return res.json(historial);
 });
 
-// RF-04.5 — Crear clienta nueva
+// RF-04.5 — Crear clienta nueva (teléfono único entre activas y eliminadas)
 router.post("/", (req, res) => {
   const { nombre, telefono, alergias, preferencias, notas } = req.body;
 
@@ -100,20 +104,20 @@ router.post("/", (req, res) => {
   }
 
   const existente = db
-    .prepare("SELECT * FROM clientas WHERE telefono = ?")
+    .prepare("SELECT * FROM clientas WHERE telefono = ? AND eliminada = 0")
     .get(telefono);
 
   if (existente) {
     return res
       .status(400)
-      .json({ error: "Ya existe una clienta con ese teléfono" });
+      .json({ error: "Ya existe una clienta activa con ese teléfono" });
   }
 
   const result = db
     .prepare(
       `
-    INSERT INTO clientas (nombre, telefono, alergias, preferencias, notas)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO clientas (nombre, telefono, alergias, preferencias, notas, eliminada)
+    VALUES (?, ?, ?, ?, ?, 0)
   `,
     )
     .run(
@@ -131,7 +135,7 @@ router.post("/", (req, res) => {
   return res.status(201).json(nueva);
 });
 
-// Editar datos completos de una clienta
+// Editar datos completos (bloqueado si está eliminada)
 router.put("/:id", (req, res) => {
   const { nombre, telefono, alergias, preferencias, notas } = req.body;
 
@@ -147,6 +151,12 @@ router.put("/:id", (req, res) => {
 
   if (!clienta) {
     return res.status(404).json({ error: "Clienta no encontrada" });
+  }
+
+  if (clienta.eliminada === 1) {
+    return res
+      .status(400)
+      .json({ error: "No se puede editar una clienta desactivada" });
   }
 
   db.prepare(
@@ -187,6 +197,12 @@ router.patch("/:id/notas", (req, res) => {
     return res.status(404).json({ error: "Clienta no encontrada" });
   }
 
+  if (clienta.eliminada === 1) {
+    return res
+      .status(400)
+      .json({ error: "No se puede editar una clienta desactivada" });
+  }
+
   db.prepare("UPDATE clientas SET notas = ? WHERE idClienta = ?").run(
     notas,
     req.params.id,
@@ -198,4 +214,30 @@ router.patch("/:id/notas", (req, res) => {
 
   return res.json(actualizada);
 });
+
+// Soft delete — marca eliminada = 1, conserva historial
+router.delete("/:id", (req, res) => {
+  const clienta = db
+    .prepare("SELECT * FROM clientas WHERE idClienta = ?")
+    .get(req.params.id);
+
+  if (!clienta) {
+    return res.status(404).json({ error: "Clienta no encontrada" });
+  }
+
+  if (clienta.eliminada === 1) {
+    return res.status(400).json({ error: "La clienta ya está desactivada" });
+  }
+
+  db.prepare("UPDATE clientas SET eliminada = 1 WHERE idClienta = ?").run(
+    req.params.id,
+  );
+
+  return res.status(200).json({
+    mensaje: "Clienta desactivada correctamente",
+    idClienta: clienta.idClienta,
+    nombre: clienta.nombre,
+  });
+});
+
 module.exports = router;

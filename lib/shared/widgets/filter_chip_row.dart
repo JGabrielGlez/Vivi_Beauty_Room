@@ -10,6 +10,7 @@ const List<String> _categorias = [
   'CEJAS',
   'MAQUILLAJE',
   'COMBOS',
+  'INACTIVOS'
 ];
 
 class FilterChipRow extends StatefulWidget {

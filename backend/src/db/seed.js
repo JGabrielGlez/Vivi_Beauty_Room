@@ -42,6 +42,7 @@ function seedClientas() {
         alergias: "Látex",
         preferencias: "Citas por la mañana",
         notas: "Cliente frecuente",
+        eliminada: 0,
       },
       {
         nombre: "María López",
@@ -49,6 +50,7 @@ function seedClientas() {
         alergias: null,
         preferencias: "Prefiere fines de semana",
         notas: null,
+        eliminada: 0,
       },
       {
         nombre: "Sofía Martínez",
@@ -56,6 +58,7 @@ function seedClientas() {
         alergias: "Níquel",
         preferencias: null,
         notas: "Alérgica a tintes con amoniaco",
+        eliminada: 0,
       },
       {
         nombre: "Lucía Hernández",
@@ -63,6 +66,7 @@ function seedClientas() {
         alergias: null,
         preferencias: "Citas por la tarde",
         notas: null,
+        eliminada: 0,
       },
       {
         nombre: "Valentina Torres",
@@ -70,16 +74,25 @@ function seedClientas() {
         alergias: "Polen",
         preferencias: null,
         notas: "Primera visita en enero 2025",
+        eliminada: 0,
+      },
+      {
+        nombre: "Carmen Ruiz",
+        telefono: "3228889900",
+        alergias: null,
+        preferencias: null,
+        notas: "Clienta de prueba desactivada",
+        eliminada: 1,
       },
     ];
 
     const stmt = db.prepare(`
-      INSERT INTO clientas (nombre, telefono, alergias, preferencias, notas)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO clientas (nombre, telefono, alergias, preferencias, notas, eliminada)
+      VALUES (?, ?, ?, ?, ?, ?)
     `);
 
     for (const c of clientas) {
-      stmt.run(c.nombre, c.telefono, c.alergias, c.preferencias, c.notas);
+      stmt.run(c.nombre, c.telefono, c.alergias, c.preferencias, c.notas, c.eliminada);
     }
 
     console.log("Clientas seed creadas");
@@ -197,7 +210,7 @@ function seedCitasAgenda() {
       {
         idClienta: clientas[0].idClienta,
         idServicio: servicios[0].idServicio,
-        fechaHora: '2025-05-09T09:00:00',
+        fechaHora: '2026-05-09T09:00:00',
         duracion: servicios[0].duracionMin + 30,
         estado: 'CONFIRMADA',
         montoAnticipo: 100,
@@ -207,7 +220,7 @@ function seedCitasAgenda() {
       {
         idClienta: clientas[1].idClienta,
         idServicio: servicios[1].idServicio,
-        fechaHora: '2025-05-09T11:00:00',
+        fechaHora: '2026-05-09T11:00:00',
         duracion: servicios[1].duracionMin + 30,
         estado: 'PENDIENTE',
         montoAnticipo: 50,
@@ -217,7 +230,7 @@ function seedCitasAgenda() {
       {
         idClienta: clientas[2].idClienta,
         idServicio: servicios[2].idServicio,
-        fechaHora: '2025-05-09T13:00:00',
+        fechaHora: '2026-05-09T13:00:00',
         duracion: servicios[2].duracionMin + 30,
         estado: 'CONFIRMADA',
         montoAnticipo: 50,
@@ -227,7 +240,7 @@ function seedCitasAgenda() {
       {
         idClienta: clientas[3].idClienta,
         idServicio: servicios[3].idServicio,
-        fechaHora: '2025-05-10T10:00:00',
+        fechaHora: '2026-05-10T10:00:00',
         duracion: servicios[3].duracionMin + 30,
         estado: 'PENDIENTE',
         montoAnticipo: 50,
@@ -237,7 +250,7 @@ function seedCitasAgenda() {
       {
         idClienta: clientas[4].idClienta,
         idServicio: servicios[0].idServicio,
-        fechaHora: '2025-05-10T14:00:00',
+        fechaHora: '2026-05-10T14:00:00',
         duracion: servicios[0].duracionMin + 30,
         estado: 'CONFIRMADA',
         montoAnticipo: 100,
@@ -247,7 +260,7 @@ function seedCitasAgenda() {
       {
         idClienta: clientas[0].idClienta,
         idServicio: servicios[1].idServicio,
-        fechaHora: '2025-05-12T09:00:00',
+        fechaHora: '2026-05-12T09:00:00',
         duracion: servicios[1].duracionMin + 30,
         estado: 'PENDIENTE',
         montoAnticipo: 50,
@@ -257,7 +270,7 @@ function seedCitasAgenda() {
       {
         idClienta: clientas[1].idClienta,
         idServicio: servicios[2].idServicio,
-        fechaHora: '2025-05-12T11:00:00',
+        fechaHora: '2026-05-12T11:00:00',
         duracion: servicios[2].duracionMin + 30,
         estado: 'CANCELADA',
         montoAnticipo: 50,
@@ -267,7 +280,7 @@ function seedCitasAgenda() {
       {
         idClienta: clientas[2].idClienta,
         idServicio: servicios[3].idServicio,
-        fechaHora: '2025-05-13T16:00:00',
+        fechaHora: '2026-05-13T16:00:00',
         duracion: servicios[3].duracionMin + 30,
         estado: 'REPROGRAMADA',
         montoAnticipo: 50,
@@ -289,4 +302,62 @@ function seedCitasAgenda() {
   }
 }
 
-module.exports = { seedUsuarios, seedClientas, seedServicios, seedCitasAgenda };
+// Citas de prueba para hoy (2026-05-10) — para probar solapamiento en el modal
+function seedCitasHoy2026() {
+  const existe = db.prepare("SELECT * FROM citas WHERE fechaHora LIKE '2026-05-10%' LIMIT 1").get();
+  if (existe) return;
+
+  const clientas = db.prepare('SELECT idClienta FROM clientas').all();
+  const servicios = db.prepare('SELECT idServicio, duracionMin FROM servicios WHERE activo = 1').all();
+
+  if (clientas.length === 0 || servicios.length === 0) return;
+
+  // 10:00 → servicio 60min + 30 buffer = ocupa hasta 11:30
+  // 13:00 → servicio 90min + 30 buffer = ocupa hasta 14:30 (novia)
+  // 16:00 → servicio 30min + 30 buffer = ocupa hasta 17:00 (cejas)
+  const citas = [
+    {
+      idClienta: clientas[0].idClienta,
+      idServicio: servicios[0].idServicio,
+      fechaHora: '2026-05-10T10:00:00',
+      duracion: servicios[0].duracionMin + 30,
+      estado: 'CONFIRMADA',
+      montoAnticipo: 100,
+      anticipoPagado: 1,
+      notas: 'Prueba solapamiento 10:00',
+    },
+    {
+      idClienta: clientas[1].idClienta,
+      idServicio: servicios[1].idServicio,
+      fechaHora: '2026-05-10T13:00:00',
+      duracion: servicios[1].duracionMin + 30,
+      estado: 'CONFIRMADA',
+      montoAnticipo: 50,
+      anticipoPagado: 0,
+      notas: 'Prueba solapamiento 13:00',
+    },
+    {
+      idClienta: clientas[2].idClienta,
+      idServicio: servicios[2].idServicio,
+      fechaHora: '2026-05-10T16:00:00',
+      duracion: servicios[2].duracionMin + 30,
+      estado: 'PENDIENTE',
+      montoAnticipo: 0,
+      anticipoPagado: 0,
+      notas: 'Prueba solapamiento 16:00',
+    },
+  ];
+
+  const stmt = db.prepare(`
+    INSERT INTO citas (idClienta, idServicio, fechaHora, duracion, estado, montoAnticipo, anticipoPagado, notas)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  for (const c of citas) {
+    stmt.run(c.idClienta, c.idServicio, c.fechaHora, c.duracion, c.estado, c.montoAnticipo, c.anticipoPagado, c.notas);
+  }
+
+  console.log('Citas de prueba 2026-05-10 creadas');
+}
+
+module.exports = { seedUsuarios, seedClientas, seedServicios, seedCitasAgenda, seedCitasHoy2026 };
