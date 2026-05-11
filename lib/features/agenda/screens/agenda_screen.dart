@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:vivi_room/core/services/api_client.dart';
+import 'package:vivi_room/features/auth/providers/auth_provider.dart';
 import 'package:vivi_room/shared/widgets/app_bottom_nav_bar.dart';
 import 'package:vivi_room/shared/widgets/app_text_field.dart';
 import 'package:vivi_room/shared/widgets/cliente_avatar.dart';
@@ -132,9 +135,142 @@ class _AgendaScreenState extends State<AgendaScreen> {
                       ),
                     ],
                   ),
-                  CircleAvatar(
-                    backgroundColor: const Color(0xFFF5F6FA),
-                    child: Icon(Icons.person_outline, color: Color(0xFFD4748F)),
+                  PopupMenuButton<String>(
+                    icon: const CircleAvatar(
+                      backgroundColor: Color(0xFFF5F6FA),
+                      child: Icon(Icons.person_outline, color: Color(0xFFD4748F)),
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    onSelected: (value) {
+                      if (value == 'password') {
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (_) => const _CambiarPasswordSheet(),
+                        );
+                      } else if (value == 'info') {
+                        showDialog(
+                          context: context,
+                          useRootNavigator: false,
+                          builder: (ctx) => AlertDialog(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            title: const Text('Vivi Beauty Room'),
+                            content: const Text(
+                              'Versión 1.0.0\nAplicación de gestión para salones de belleza.',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(ctx).pop(),
+                                child: const Text(
+                                  'Cerrar',
+                                  style: TextStyle(color: Color(0xFFD4748F)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      } else if (value == 'logout') {
+                        final authProvider = context.read<AuthProvider>();
+                        showDialog(
+                          context: context,
+                          useRootNavigator: false,
+                          builder: (ctx) => AlertDialog(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            title: const Text('Cerrar sesión'),
+                            content: const Text(
+                              '¿Estás segura de que deseas cerrar sesión?',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(ctx).pop(),
+                                child: const Text('Cancelar'),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.of(ctx).pop();
+                                  authProvider.signOut();
+                                },
+                                child: const Text(
+                                  'Cerrar sesión',
+                                  style: TextStyle(color: Colors.red),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                    },
+                    itemBuilder: (context) {
+                      final usuario = context.read<AuthProvider>().usuario;
+                      return [
+                        PopupMenuItem<String>(
+                          enabled: false,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                usuario?.nombre ?? 'Usuario',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                usuario?.rol ?? '',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.black45,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuDivider(),
+                        PopupMenuItem<String>(
+                          value: 'password',
+                          child: Row(
+                            children: const [
+                              Icon(Icons.lock_outline, size: 18, color: Colors.black54),
+                              SizedBox(width: 12),
+                              Text('Cambiar contraseña'),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem<String>(
+                          value: 'info',
+                          child: Row(
+                            children: const [
+                              Icon(Icons.info_outline, size: 18, color: Colors.black54),
+                              SizedBox(width: 12),
+                              Text('Información de la app'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuDivider(),
+                        PopupMenuItem<String>(
+                          value: 'logout',
+                          child: Row(
+                            children: const [
+                              Icon(Icons.logout, size: 18, color: Colors.red),
+                              SizedBox(width: 12),
+                              Text(
+                                'Cerrar sesión',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ];
+                    },
                   ),
                 ],
               ),
@@ -572,4 +708,236 @@ Widget _timeField(String label, TimeOfDay time, VoidCallback onTap) {
       ),
     ),
   );
+}
+
+class _CambiarPasswordSheet extends StatefulWidget {
+  const _CambiarPasswordSheet();
+
+  @override
+  State<_CambiarPasswordSheet> createState() => _CambiarPasswordSheetState();
+}
+
+class _CambiarPasswordSheetState extends State<_CambiarPasswordSheet> {
+  final _actualCtrl = TextEditingController();
+  final _nuevaCtrl = TextEditingController();
+  final _confirmarCtrl = TextEditingController();
+  bool _obscuraActual = true;
+  bool _obscuraNueva = true;
+  bool _obscuraConfirmar = true;
+  bool _guardando = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _actualCtrl.dispose();
+    _nuevaCtrl.dispose();
+    _confirmarCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _guardar() async {
+    final actual = _actualCtrl.text.trim();
+    final nueva = _nuevaCtrl.text.trim();
+    final confirmar = _confirmarCtrl.text.trim();
+
+    if (actual.isEmpty || nueva.isEmpty || confirmar.isEmpty) {
+      setState(() => _error = 'Completa todos los campos');
+      return;
+    }
+    if (nueva.length < 6) {
+      setState(() => _error = 'La nueva contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+    if (nueva != confirmar) {
+      setState(() => _error = 'Las contraseñas nuevas no coinciden');
+      return;
+    }
+
+    setState(() {
+      _guardando = true;
+      _error = null;
+    });
+
+    final apiClient = context.read<ApiClient>();
+    final result = await apiClient.changePassword(
+      passwordActual: actual,
+      passwordNueva: nueva,
+    );
+
+    if (!mounted) return;
+
+    if (result['success'] == true) {
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Contraseña actualizada correctamente'),
+          backgroundColor: Color(0xFFE8A0B4),
+        ),
+      );
+    } else {
+      setState(() {
+        _guardando = false;
+        _error = result['error'] ?? 'No se pudo cambiar la contraseña';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Cambiar contraseña',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 20),
+            if (_error != null) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  border: Border.all(color: Colors.red.shade300),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  _error!,
+                  style: TextStyle(color: Colors.red.shade700, fontSize: 13),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+            _PasswordField(
+              label: 'Contraseña actual',
+              controller: _actualCtrl,
+              obscure: _obscuraActual,
+              onToggle: () => setState(() => _obscuraActual = !_obscuraActual),
+              enabled: !_guardando,
+            ),
+            _PasswordField(
+              label: 'Nueva contraseña',
+              controller: _nuevaCtrl,
+              obscure: _obscuraNueva,
+              onToggle: () => setState(() => _obscuraNueva = !_obscuraNueva),
+              enabled: !_guardando,
+            ),
+            _PasswordField(
+              label: 'Confirmar nueva contraseña',
+              controller: _confirmarCtrl,
+              obscure: _obscuraConfirmar,
+              onToggle: () => setState(() => _obscuraConfirmar = !_obscuraConfirmar),
+              enabled: !_guardando,
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _guardando ? null : _guardar,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFD4748F),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
+                ),
+                child: Text(
+                  _guardando ? 'Guardando...' : 'Guardar',
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PasswordField extends StatelessWidget {
+  const _PasswordField({
+    required this.label,
+    required this.controller,
+    required this.obscure,
+    required this.onToggle,
+    required this.enabled,
+  });
+
+  final String label;
+  final TextEditingController controller;
+  final bool obscure;
+  final VoidCallback onToggle;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontWeight: FontWeight.w500,
+              fontSize: 14,
+              color: Color(0xFF1A1A1A),
+            ),
+          ),
+          const SizedBox(height: 6),
+          TextField(
+            controller: controller,
+            obscureText: obscure,
+            enabled: enabled,
+            style: const TextStyle(fontSize: 14, color: Color(0xFF1A1A1A)),
+            decoration: InputDecoration(
+              hintText: '••••••••',
+              hintStyle: const TextStyle(fontSize: 14, color: Color(0xFF888888)),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                  color: const Color(0xFF888888),
+                  size: 20,
+                ),
+                onPressed: onToggle,
+              ),
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFCCCCCC), width: 1.5),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFD4748F), width: 1.5),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

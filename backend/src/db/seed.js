@@ -42,6 +42,7 @@ function seedClientas() {
         alergias: "Látex",
         preferencias: "Citas por la mañana",
         notas: "Cliente frecuente",
+        eliminada: 0,
       },
       {
         nombre: "María López",
@@ -49,6 +50,7 @@ function seedClientas() {
         alergias: null,
         preferencias: "Prefiere fines de semana",
         notas: null,
+        eliminada: 0,
       },
       {
         nombre: "Sofía Martínez",
@@ -56,6 +58,7 @@ function seedClientas() {
         alergias: "Níquel",
         preferencias: null,
         notas: "Alérgica a tintes con amoniaco",
+        eliminada: 0,
       },
       {
         nombre: "Lucía Hernández",
@@ -63,6 +66,7 @@ function seedClientas() {
         alergias: null,
         preferencias: "Citas por la tarde",
         notas: null,
+        eliminada: 0,
       },
       {
         nombre: "Valentina Torres",
@@ -70,16 +74,25 @@ function seedClientas() {
         alergias: "Polen",
         preferencias: null,
         notas: "Primera visita en enero 2025",
+        eliminada: 0,
+      },
+      {
+        nombre: "Carmen Ruiz",
+        telefono: "3228889900",
+        alergias: null,
+        preferencias: null,
+        notas: "Clienta de prueba desactivada",
+        eliminada: 1,
       },
     ];
 
     const stmt = db.prepare(`
-      INSERT INTO clientas (nombre, telefono, alergias, preferencias, notas)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO clientas (nombre, telefono, alergias, preferencias, notas, eliminada)
+      VALUES (?, ?, ?, ?, ?, ?)
     `);
 
     for (const c of clientas) {
-      stmt.run(c.nombre, c.telefono, c.alergias, c.preferencias, c.notas);
+      stmt.run(c.nombre, c.telefono, c.alergias, c.preferencias, c.notas, c.eliminada);
     }
 
     console.log("Clientas seed creadas");

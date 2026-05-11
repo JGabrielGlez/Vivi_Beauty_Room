@@ -1,14 +1,11 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
+import 'package:vivi_room/core/services/api_client.dart';
 import '../../../shared/models/clienta.dart';
 import '../../../shared/models/servicio.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../../shared/widgets/search_bar_widget.dart';
-
-// URL base del backend. En emulador Android usar 10.0.2.2, en desktop/web usar localhost.
-const String _baseUrl = 'http://localhost:3000';
 
 class NuevaCitaModal extends StatefulWidget {
   const NuevaCitaModal({super.key});
@@ -60,10 +57,18 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
   bool _buscandoClientas = false;
   Timer? _debounceTimer;
 
+  late ApiClient _apiClient;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _apiClient = context.read<ApiClient>();
+  }
+
   @override
   void initState() {
     super.initState();
-    _cargarServicios();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _cargarServicios());
   }
 
   @override
@@ -94,43 +99,36 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
   // Llama al backend con el texto buscado y muestra los resultados
   Future<void> _buscarClientas(String q) async {
     setState(() => _buscandoClientas = true);
-    try {
-      final uri = Uri.parse('$_baseUrl/api/clientas')
-          .replace(queryParameters: {'q': q});
-      final response = await http.get(uri);
-      if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
-        setState(() {
-          _resultadosBusqueda = data.map((e) => Clienta.fromJson(e)).toList();
-          _buscandoClientas = false;
-        });
-      } else {
-        setState(() => _buscandoClientas = false);
-      }
-    } catch (_) {
-      setState(() => _buscandoClientas = false);
+    final result = await _apiClient.getClientas(query: q);
+    if (!mounted) return;
+    if (result['success'] == true) {
+      final List<dynamic> data = result['data'] as List<dynamic>;
+      setState(() {
+        _resultadosBusqueda = data
+            .whereType<Map<String, dynamic>>()
+            .map((e) => Clienta.fromJson(e))
+            .toList();
+      });
     }
+    setState(() => _buscandoClientas = false);
   }
 
   // Llama al backend y llena la lista de servicios activos
   Future<void> _cargarServicios() async {
-    try {
-      final response = await http.get(Uri.parse('$_baseUrl/api/servicios'));
-      if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
-        setState(() {
-          _servicios = data.map((e) => Servicio.fromJson(e)).toList();
-          _cargando = false;
-        });
-      } else {
-        setState(() {
-          _errorServicios = 'Error ${response.statusCode}';
-          _cargando = false;
-        });
-      }
-    } catch (e) {
+    final result = await _apiClient.getServicios();
+    if (!mounted) return;
+    if (result['success'] == true) {
+      final List<dynamic> data = result['data'] as List<dynamic>;
       setState(() {
-        _errorServicios = 'No se pudo conectar al servidor';
+        _servicios = data
+            .whereType<Map<String, dynamic>>()
+            .map((e) => Servicio.fromJson(e))
+            .toList();
+        _cargando = false;
+      });
+    } else {
+      setState(() {
+        _errorServicios = result['error'] ?? 'No se pudieron cargar los servicios';
         _cargando = false;
       });
     }
@@ -679,13 +677,11 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
 
     setState(() => _verificandoSolapamiento = true);
 
-    try {
-      final uri = Uri.parse('$_baseUrl/api/agenda/citas/semana')
-          .replace(queryParameters: {'inicio': inicioStr});
-      final response = await http.get(uri);
+    final result = await _apiClient.getCitasSemana(inicioStr);
+    if (!mounted) return;
 
-      if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
+    if (result['success'] == true) {
+        final List<dynamic> data = result['data'] as List<dynamic>;
         String? conflicto;
 
         for (final cita in data) {
@@ -716,10 +712,7 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
           _errorSolapamiento = conflicto;
           _verificandoSolapamiento = false;
         });
-      } else {
-        setState(() => _verificandoSolapamiento = false);
-      }
-    } catch (_) {
+    } else {
       setState(() => _verificandoSolapamiento = false);
     }
   }
@@ -811,36 +804,22 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
 
     setState(() => _guardando = true);
 
-    try {
-      final response = await http.post(
-        Uri.parse('$_baseUrl/api/agenda/citas'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'idClienta': _clientaSeleccionada?.id,
-          'idServicio': _servicioSeleccionadoId,
-          'fechaHora': fechaHora,
-          'duracion': duracion,
-          'montoAnticipo': montoAnticipo,
-          'anticipoPagado': 0,
-          'notas': notas,
-        }),
-      );
+    final result = await _apiClient.crearCita(
+      idServicio: _servicioSeleccionadoId!,
+      fechaHora: fechaHora,
+      duracion: duracion,
+      idClienta: _clientaSeleccionada?.id,
+      montoAnticipo: montoAnticipo,
+      notas: notas,
+    );
 
-      if (!mounted) return;
+    if (!mounted) return;
 
-      if (response.statusCode == 201) {
-        Navigator.pop(context, true);
-      } else {
-        final body = jsonDecode(response.body);
-        setState(() {
-          _errorGuardar = body['error'] ?? 'Error al guardar la cita';
-          _guardando = false;
-        });
-      }
-    } catch (_) {
-      if (!mounted) return;
+    if (result['success'] == true) {
+      Navigator.pop(context, true);
+    } else {
       setState(() {
-        _errorGuardar = 'No se pudo conectar al servidor';
+        _errorGuardar = result['error'] ?? 'Error al guardar la cita';
         _guardando = false;
       });
     }
