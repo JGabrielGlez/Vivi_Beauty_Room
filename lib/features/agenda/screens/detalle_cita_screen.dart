@@ -5,9 +5,12 @@ import '../../../shared/widgets/secondary_button.dart';
 import '../../../shared/widgets/cliente_avatar.dart';
 import '../../../core/theme/app_colors.dart';
 import 'package:http/http.dart' as http;
+import 'agenda_screen.dart';
 
-String backendBaseUrl = const String.fromEnvironment('BACKEND_URL', defaultValue: 'http://10.0.2.2:3000');
-
+String backendBaseUrl = const String.fromEnvironment('BACKEND_URL', defaultValue: 'http://localhost:3000');
+bool pago=true;
+String token="";
+Map<String,String> header = {'Content-Type': 'application/json','Authorization': 'Bearer $token'};
 
 // ─── MODELO TEMPORAL (sprint visual) ─────────────────────────────────────────
 // Reemplazar por el objeto Cita real de shared/models/ al integrar
@@ -72,6 +75,7 @@ class _DetalleCitaScreenState extends State<DetalleCitaScreen> {
       'estado': 'PENDIENTE',
       'anticipoPagado': false,
     };
+    pago=_cita['anticipoPagado']==1;
   }
 
   String get _fechaFormateada {
@@ -117,13 +121,14 @@ class _DetalleCitaScreenState extends State<DetalleCitaScreen> {
     try {
       final response = await http.put(
         Uri.parse('$backendBaseUrl/api/agenda/citas/${_cita['id']}'),
-        headers: {'Content-Type': 'application/json'},
+        headers: header,
         body: '{"anticipoPagado": 1}',
       );
       if (response.statusCode == 200) {
         // Opcional: volver a cargar la cita desde el backend para asegurar datos frescos
-
         _showSnack('Anticipo marcado como recibido');
+        setState(() {pago=!pago;});
+        Navigator.pushReplacement(context,MaterialPageRoute(builder: (_) =>const AgendaScreen()),);
       } else {
         _showSnack('Error al marcar anticipo: ${response.statusCode}');
       }
@@ -136,7 +141,7 @@ class _DetalleCitaScreenState extends State<DetalleCitaScreen> {
     try {
       final response = await http.get(
         Uri.parse('$backendBaseUrl/api/agenda/citas/${_cita['id']}'),
-        headers: {'Content-Type': 'application/json'},
+        headers: header,
       );
       if (response.statusCode == 200) {
         final nuevaCita = Map<String, dynamic>.from(
@@ -154,12 +159,13 @@ class _DetalleCitaScreenState extends State<DetalleCitaScreen> {
     try {
       final response = await http.put(
         Uri.parse('$backendBaseUrl/api/agenda/citas/${_cita['id']}'),
-        headers: {'Content-Type': 'application/json'},
+        headers: header,
         body: '{"estado": "CONFIRMADA"}',
       );
       if (response.statusCode == 200) {
         await _refrescarCita();
         _showSnack('Cita confirmada');
+        Navigator.pushReplacement(context,MaterialPageRoute(builder: (_) =>const AgendaScreen()),);
       } else {
         _showSnack('Error al confirmar cita: ${response.statusCode}');
       }
@@ -171,12 +177,16 @@ class _DetalleCitaScreenState extends State<DetalleCitaScreen> {
     try {
       final response = await http.put(
         Uri.parse('$backendBaseUrl/api/agenda/citas/${_cita['id']}'),
-        headers: {'Content-Type': 'application/json'},
+        headers: header,
         body: '{"estado": "COMPLETADA"}',
       );
       if (response.statusCode == 200) {
-        await _refrescarCita();
-        _showSnack('Cita completada');
+        setState(() {
+          _cita['estado'] = 'COMPLETADA';
+        });
+        _showSnack('Cita marcada como completada');
+        Navigator.pushReplacement(context,MaterialPageRoute(builder: (_) =>const AgendaScreen()),);
+        
       } else {
         _showSnack('Error al completar cita: ${response.statusCode}');
       }
@@ -249,12 +259,13 @@ class _DetalleCitaScreenState extends State<DetalleCitaScreen> {
       try {
         final response = await http.put(
           Uri.parse('$backendBaseUrl/api/agenda/citas/${_cita['id']}'),
-          headers: {'Content-Type': 'application/json'},
+          headers: header,
           body: '{"estado": "CANCELADA"}',
         );
         if (response.statusCode == 200) {
           await _refrescarCita();
           _showSnack('Cita cancelada. Anticipo retenido.');
+          Navigator.pushReplacement(context,MaterialPageRoute(builder: (_) =>const AgendaScreen()),);
         } else {
           _showSnack('Error al cancelar cita: ${response.statusCode}');
         }
@@ -680,7 +691,7 @@ class _SeccionAcciones extends StatelessWidget {
         ],
         // Completar: solo CONFIRMADA
         if (estado == 'CONFIRMADA') ...[
-          PrimaryButton(text: 'Marcar como completada', onPressed: onCompletar),
+          PrimaryButton(text: 'Marcar como completada', onPressed:pago?onCompletar: null),
           const SizedBox(height: 12),
         ],
         // Reprogramar: PENDIENTE o CONFIRMADA

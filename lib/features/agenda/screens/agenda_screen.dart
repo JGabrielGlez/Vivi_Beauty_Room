@@ -12,6 +12,9 @@ import 'dart:developer' as _logger;
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
+String token="";
+Map<String,String> header = {'Content-Type': 'application/json','Authorization': 'Bearer $token'};
+
 class AgendaScreen extends StatefulWidget {
   const AgendaScreen({super.key});
 
@@ -36,7 +39,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
       return result;
     }
   // Configuración de la URL base del backend
-  static String backendBaseUrl = const String.fromEnvironment('BACKEND_URL', defaultValue: 'http://10.0.2.2:3000');
+  static String backendBaseUrl = const String.fromEnvironment('BACKEND_URL', defaultValue: 'http://localhost:3000');
   int index = 0;
   int selectedDayIndex = 0;
   late List<Map<String, String>> days = [];
@@ -76,7 +79,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
     final url = Uri.parse("$backendBaseUrl/api/agenda/citas/dia?fecha=$formattedDate");
 
     try {
-      final response = await http.get(url);
+      final response = await http.get(url,headers: header);
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
         appointments = data.map((e) => e as Map<String, dynamic>).toList();
@@ -97,7 +100,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
   }
   Future<String> extraerCliente(String id) async {
     try {
-      final response = await http.get(Uri.parse("$backendBaseUrl/api/clientas/$id"));
+      final response = await http.get(Uri.parse("$backendBaseUrl/api/clientas/$id"),headers: header);
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
         // Ajusta el campo según la respuesta real del backend
