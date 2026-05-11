@@ -54,6 +54,10 @@ tickets/
 database.db
 
 # Variables de entorno
+backend/.env
+
+# Credenciales de APIs externas (no subir JSONs con claves privadas)
+backend/credentials/*.json
 
 # --- Flutter Generated Files ---
 # Archivos generados de plataformas

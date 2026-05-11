@@ -78,6 +78,13 @@ db.prepare(
 `,
 ).run();
 
+// Migración segura: añade columna googleCalendarEventId si no existe
+const colsCitas = db.prepare("PRAGMA table_info(citas)").all();
+if (!colsCitas.some((c) => c.name === "googleCalendarEventId")) {
+  db.prepare("ALTER TABLE citas ADD COLUMN googleCalendarEventId TEXT").run();
+  console.log("Migración: columna 'googleCalendarEventId' añadida a citas");
+}
+
 // Horarios bloqueados
 db.prepare(
   `
