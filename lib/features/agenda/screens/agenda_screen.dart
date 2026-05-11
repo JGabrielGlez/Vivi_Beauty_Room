@@ -39,6 +39,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
   late ApiClient _apiClient;
   int index = 0;
   int selectedDayIndex = 0;
+  bool mostrandoTodo = false;
   late List<Map<String, String>> days = [];
   @override
   void didChangeDependencies() {
@@ -73,6 +74,34 @@ class _AgendaScreenState extends State<AgendaScreen> {
   bool isLoading = false;
   String? errorMsg;
 
+  Future<void> fetchAllAppointments() async {
+    setState(() {
+      isLoading = true;
+      errorMsg = null;
+      mostrandoTodo = true;
+    });
+    final result = await _apiClient.getCitas();
+    if (!mounted) return;
+    if (result['success'] == true) {
+      final List<dynamic> data = result['data'] as List<dynamic>;
+      final all = data.whereType<Map<String, dynamic>>().toList();
+      all.sort((a, b) {
+        final fa = DateTime.tryParse(a['fechaHora'] ?? '') ?? DateTime(9999);
+        final fb = DateTime.tryParse(b['fechaHora'] ?? '') ?? DateTime(9999);
+        return fa.compareTo(fb);
+      });
+      setState(() {
+        appointments = all;
+        isLoading = false;
+      });
+    } else {
+      setState(() {
+        errorMsg = result['error'] ?? 'Error al cargar citas';
+        isLoading = false;
+      });
+    }
+  }
+
   Future<void> fetchAppointmentsForDay(DateTime date) async {
     setState(() {
       isLoading = true;
@@ -103,6 +132,12 @@ class _AgendaScreenState extends State<AgendaScreen> {
   String extraerHora(String time) {
     final hora = time.split('T')[1];
     return '${hora.split(':')[0]}:${hora.split(':')[1]}';
+  }
+
+  String extraerFecha(String time) {
+    final partes = time.split('T')[0].split('-');
+    if (partes.length < 3) return '';
+    return '${partes[2]}/${partes[1]}';
   }
 
   String _weekdayShort(int weekday) {
@@ -312,13 +347,17 @@ class _AgendaScreenState extends State<AgendaScreen> {
                 height: 60,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
-                  itemCount: days.length,
+                  itemCount: days.length + 1,
                   itemBuilder: (context, i) {
+                    if (i == days.length) {
+                      return _mostrarTodoChip();
+                    }
                     final day = days[i];
                     return GestureDetector(
                       onTap: () {
                         setState(() {
                           selectedDayIndex = i;
+                          mostrandoTodo = false;
                         });
                         // Usar la fecha exacta del chip seleccionado
                         final selectedDate = DateTime.parse(day['fullDate']!);
@@ -327,7 +366,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
                       child: _dayChip(
                         day['day']!,
                         day['date']!,
-                        selectedDayIndex == i,
+                        !mostrandoTodo && selectedDayIndex == i,
                       ),
                     );
                   },
@@ -357,12 +396,17 @@ class _AgendaScreenState extends State<AgendaScreen> {
                                         },
                                       ),
                                     );
-                                    fetchAppointmentsForDay(
-                                      DateTime.parse(days[selectedDayIndex]['fullDate']!),
-                                    );
+                                    if (mostrandoTodo) {
+                                      fetchAllAppointments();
+                                    } else {
+                                      fetchAppointmentsForDay(
+                                        DateTime.parse(days[selectedDayIndex]['fullDate']!),
+                                      );
+                                    }
                                   },
                                   child: _agendaCard(
                                     time: extraerHora(appointments[i]['fechaHora'] ?? ''),
+                                    fecha: mostrandoTodo ? extraerFecha(appointments[i]['fechaHora'] ?? '') : null,
                                     nombre: appointments[i]['nombreCliente'] ?? 'Sin cliente',
                                     servicio: appointments[i]['nombreServicio'] ?? '',
                                     duracion: appointments[i]['duracion']?.toString() ?? '',
@@ -428,12 +472,39 @@ class _AgendaScreenState extends State<AgendaScreen> {
     );
   }
 
+  Widget _mostrarTodoChip() {
+    return GestureDetector(
+      onTap: fetchAllAppointments,
+      child: Padding(
+        padding: const EdgeInsets.only(right: 8),
+        child: Container(
+          decoration: BoxDecoration(
+            color: mostrandoTodo ? const Color(0xFFD4748F) : const Color(0xFFF5F6FA),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Center(
+            child: Text(
+              'Mostrar todo',
+              style: TextStyle(
+                color: mostrandoTodo ? Colors.white : Colors.black,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _agendaCard({
     required String time,
     required String nombre,
     required String servicio,
     required String duracion,
     required String status,
+    String? fecha,
     bool leftAccent = false,
   }) {
     return Padding(
@@ -443,13 +514,27 @@ class _AgendaScreenState extends State<AgendaScreen> {
         children: [
           SizedBox(
             width: 60,
-            child: Text(
-              time,
-              style: const TextStyle(
-                color: Color(0xFFB0B7C3),
-                fontWeight: FontWeight.w500,
-                fontSize: 13,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (fecha != null)
+                  Text(
+                    fecha,
+                    style: const TextStyle(
+                      color: Color(0xFFD4748F),
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
+                  ),
+                Text(
+                  time,
+                  style: const TextStyle(
+                    color: Color(0xFFB0B7C3),
+                    fontWeight: FontWeight.w500,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
             ),
           ),
           Expanded(
