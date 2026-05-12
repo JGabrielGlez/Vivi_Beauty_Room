@@ -57,10 +57,7 @@ class _AppBottomNavBarState extends State<AppBottomNavBar> {
             icon: Icon(LucideIcons.scissors, size: iconSize),
             label: 'SERVICIOS',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(LucideIcons.settings, size: iconSize),
-            label: 'MÁS',
-          ),
+          
         ],
       ),
     );
