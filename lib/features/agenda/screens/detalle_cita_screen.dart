@@ -657,7 +657,7 @@ class _SeccionAcciones extends StatelessWidget {
         ],
         // Reprogramar: PENDIENTE o CONFIRMADA
         if (estado == 'PENDIENTE' || estado == 'CONFIRMADA') ...[
-          SecondaryButton(text: 'Reprogramar cita', onPressed: onReprogramar),
+          SecondaryButton(text: 'Modificar cita', onPressed: onReprogramar),
           const SizedBox(height: 12),
         ],
         // Cancelar: destructivo con modal de confirmación
