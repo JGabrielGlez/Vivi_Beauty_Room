@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [develop, main, GoogleCalendar]
+    branches: [develop, main, GoogleCalendar, pruebas]
   pull_request:
     branches: [develop, main]
 
