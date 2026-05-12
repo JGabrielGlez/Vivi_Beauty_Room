@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:vivi_room/core/services/analytics_service.dart';
 import 'package:vivi_room/features/citas/widgets/nueva_cita_modal.dart';
 import '../../../core/services/api_client.dart';
 import '../../../core/theme/app_colors.dart';
@@ -210,12 +211,16 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
                                     onAgendar: servicio.proximamente ||
                                             !servicio.activo
                                         ? null
-                                        : () => showModalBottomSheet(
+                                        : () {
+                                            AnalyticsService.servicioVisto(servicio.nombre);
+                                            showModalBottomSheet(
                                               isScrollControlled: true,
                                               context: context,
-                                              builder: (context) =>
-                                                  const NuevaCitaModal(),
-                                            ),
+                                              builder: (context) => NuevaCitaModal(
+                                                servicioPreseleccionadoId: servicio.id,
+                                              ),
+                                            );
+                                          },
                                     onEditar: () =>
                                         _abrirEditarServicio(servicio),
                                   );

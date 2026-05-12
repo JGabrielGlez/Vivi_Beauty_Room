@@ -2,16 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:vivi_room/core/services/api_client.dart';
 import 'package:vivi_room/features/auth/providers/auth_provider.dart';
-import 'package:vivi_room/shared/widgets/app_bottom_nav_bar.dart';
-import 'package:vivi_room/shared/widgets/app_text_field.dart';
-import 'package:vivi_room/shared/widgets/cliente_avatar.dart';
-import 'package:vivi_room/shared/widgets/primary_button.dart';
 import 'package:vivi_room/shared/widgets/status_badge.dart';
 import '../../../shared/widgets/fab_button.dart';
-import '../../../shared/widgets/search_bar_widget.dart';
 import '../screens/detalle_cita_screen.dart';
 import '../../citas/widgets/nueva_cita_modal.dart';
-import 'dart:developer' as _logger;
 
 class AgendaScreen extends StatefulWidget {
   const AgendaScreen({super.key});
@@ -24,7 +18,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
     // Genera la lista de días para la agenda
     List<Map<String, String>> _generateDays(DateTime currentDate) {
       final List<Map<String, String>> result = [];
-      for (int i = -2; i <= 4; i++) {
+      for (int i = 0; i <= 6; i++) {
         final date = currentDate.add(Duration(days: i));
         final isToday = i == 0;
         result.add({
@@ -39,7 +33,8 @@ class _AgendaScreenState extends State<AgendaScreen> {
   late ApiClient _apiClient;
   int index = 0;
   int selectedDayIndex = 0;
-  bool mostrandoTodo = false;
+  bool mostrandoRango = false;
+  DateTimeRange? _rangoSeleccionado;
   late List<Map<String, String>> days = [];
   @override
   void didChangeDependencies() {
@@ -74,24 +69,49 @@ class _AgendaScreenState extends State<AgendaScreen> {
   bool isLoading = false;
   String? errorMsg;
 
-  Future<void> fetchAllAppointments() async {
+  Future<void> _seleccionarRango() async {
+    final rango = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      locale: const Locale('es'),
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: const ColorScheme.light(
+            primary: Color(0xFFD4748F),
+            onPrimary: Colors.white,
+            surface: Colors.white,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    if (rango == null) return;
     setState(() {
+      _rangoSeleccionado = rango;
       isLoading = true;
       errorMsg = null;
-      mostrandoTodo = true;
+      mostrandoRango = true;
     });
     final result = await _apiClient.getCitas();
     if (!mounted) return;
     if (result['success'] == true) {
       final List<dynamic> data = result['data'] as List<dynamic>;
-      final all = data.whereType<Map<String, dynamic>>().toList();
-      all.sort((a, b) {
-        final fa = DateTime.tryParse(a['fechaHora'] ?? '') ?? DateTime(9999);
-        final fb = DateTime.tryParse(b['fechaHora'] ?? '') ?? DateTime(9999);
-        return fa.compareTo(fb);
-      });
+      final filtradas = data.whereType<Map<String, dynamic>>().where((c) {
+        final fecha = DateTime.tryParse(c['fechaHora'] ?? '');
+        if (fecha == null) return false;
+        final solo = DateTime(fecha.year, fecha.month, fecha.day);
+        final inicio = DateTime(rango.start.year, rango.start.month, rango.start.day);
+        final fin = DateTime(rango.end.year, rango.end.month, rango.end.day);
+        return !solo.isBefore(inicio) && !solo.isAfter(fin);
+      }).toList()
+        ..sort((a, b) {
+          final fa = DateTime.tryParse(a['fechaHora'] ?? '') ?? DateTime(9999);
+          final fb = DateTime.tryParse(b['fechaHora'] ?? '') ?? DateTime(9999);
+          return fa.compareTo(fb);
+        });
       setState(() {
-        appointments = all;
+        appointments = filtradas;
         isLoading = false;
       });
     } else {
@@ -102,10 +122,12 @@ class _AgendaScreenState extends State<AgendaScreen> {
     }
   }
 
+
   Future<void> fetchAppointmentsForDay(DateTime date) async {
     setState(() {
       isLoading = true;
       errorMsg = null;
+      mostrandoRango = false;
     });
     final String fecha =
         '${date.year.toString().padLeft(4, '0')}-'
@@ -350,14 +372,13 @@ class _AgendaScreenState extends State<AgendaScreen> {
                   itemCount: days.length + 1,
                   itemBuilder: (context, i) {
                     if (i == days.length) {
-                      return _mostrarTodoChip();
+                      return _rangoFechasChip();
                     }
                     final day = days[i];
                     return GestureDetector(
                       onTap: () {
                         setState(() {
                           selectedDayIndex = i;
-                          mostrandoTodo = false;
                         });
                         // Usar la fecha exacta del chip seleccionado
                         final selectedDate = DateTime.parse(day['fullDate']!);
@@ -366,7 +387,8 @@ class _AgendaScreenState extends State<AgendaScreen> {
                       child: _dayChip(
                         day['day']!,
                         day['date']!,
-                        !mostrandoTodo && selectedDayIndex == i,
+                        !mostrandoRango && selectedDayIndex == i,
+                        isToday: day['isToday'] == 'true',
                       ),
                     );
                   },
@@ -396,8 +418,8 @@ class _AgendaScreenState extends State<AgendaScreen> {
                                         },
                                       ),
                                     );
-                                    if (mostrandoTodo) {
-                                      fetchAllAppointments();
+                                    if (mostrandoRango) {
+                                      _seleccionarRango();
                                     } else {
                                       fetchAppointmentsForDay(
                                         DateTime.parse(days[selectedDayIndex]['fullDate']!),
@@ -406,7 +428,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
                                   },
                                   child: _agendaCard(
                                     time: extraerHora(appointments[i]['fechaHora'] ?? ''),
-                                    fecha: mostrandoTodo ? extraerFecha(appointments[i]['fechaHora'] ?? '') : null,
+                                    fecha: mostrandoRango ? extraerFecha(appointments[i]['fechaHora'] ?? '') : null,
                                     nombre: appointments[i]['nombreCliente'] ?? 'Sin cliente',
                                     servicio: appointments[i]['nombreServicio'] ?? '',
                                     duracion: appointments[i]['duracion']?.toString() ?? '',
@@ -433,7 +455,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
     );
   }
 
-  Widget _dayChip(String day, String date, bool selected) {
+  Widget _dayChip(String day, String date, bool selected, {bool isToday = false}) {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: Column(
@@ -449,12 +471,14 @@ class _AgendaScreenState extends State<AgendaScreen> {
             child: Column(
               children: [
                 Text(
-                  day,
+                  isToday ? 'HOY' : day,
                   style: TextStyle(
                     color: selected
                         ? Colors.white
-                        : Colors.black.withOpacity(0.5),
-                    fontWeight: FontWeight.w500,
+                        : isToday
+                            ? const Color(0xFFD4748F)
+                            : Colors.black.withOpacity(0.5),
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
                 Text(
@@ -472,22 +496,28 @@ class _AgendaScreenState extends State<AgendaScreen> {
     );
   }
 
-  Widget _mostrarTodoChip() {
+  Widget _rangoFechasChip() {
+    String label = 'Rango';
+    if (mostrandoRango && _rangoSeleccionado != null) {
+      final s = _rangoSeleccionado!.start;
+      final e = _rangoSeleccionado!.end;
+      label = '${s.day}/${s.month} - ${e.day}/${e.month}';
+    }
     return GestureDetector(
-      onTap: fetchAllAppointments,
+      onTap: _seleccionarRango,
       child: Padding(
         padding: const EdgeInsets.only(right: 8),
         child: Container(
           decoration: BoxDecoration(
-            color: mostrandoTodo ? const Color(0xFFD4748F) : const Color(0xFFF5F6FA),
+            color: mostrandoRango ? const Color(0xFFD4748F) : const Color(0xFFF5F6FA),
             borderRadius: BorderRadius.circular(12),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Center(
             child: Text(
-              'Mostrar todo',
+              label,
               style: TextStyle(
-                color: mostrandoTodo ? Colors.white : Colors.black,
+                color: mostrandoRango ? Colors.white : Colors.black,
                 fontWeight: FontWeight.w600,
                 fontSize: 13,
               ),
@@ -497,6 +527,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
       ),
     );
   }
+
 
   Widget _agendaCard({
     required String time,

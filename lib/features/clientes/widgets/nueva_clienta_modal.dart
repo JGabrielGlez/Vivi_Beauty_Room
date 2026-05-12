@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:vivi_room/core/services/analytics_service.dart';
 import 'package:vivi_room/features/clientes/providers/clientas_provider.dart';
 import 'package:vivi_room/shared/widgets/app_text_field.dart';
 import 'package:vivi_room/shared/widgets/primary_button.dart';
@@ -61,6 +62,7 @@ class _NuevaClientaModalState extends State<NuevaClientaModal> {
     if (!mounted) return;
 
     if (success) {
+      AnalyticsService.clienteRegistrado();
       Navigator.of(context).pop(true);
       return;
     }

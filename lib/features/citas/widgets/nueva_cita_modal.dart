@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:vivi_room/core/services/analytics_service.dart';
 import 'package:vivi_room/core/services/api_client.dart';
 import '../../../shared/models/clienta.dart';
 import '../../../shared/models/servicio.dart';
@@ -8,7 +9,9 @@ import '../../../shared/widgets/primary_button.dart';
 import '../../../shared/widgets/search_bar_widget.dart';
 
 class NuevaCitaModal extends StatefulWidget {
-  const NuevaCitaModal({super.key});
+  final String? servicioPreseleccionadoId;
+
+  const NuevaCitaModal({super.key, this.servicioPreseleccionadoId});
 
   @override
   State<NuevaCitaModal> createState() => _NuevaCitaModalState();
@@ -125,6 +128,9 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
             .map((e) => Servicio.fromJson(e))
             .toList();
         _cargando = false;
+        if (widget.servicioPreseleccionadoId != null) {
+          _servicioSeleccionadoId = widget.servicioPreseleccionadoId;
+        }
       });
     } else {
       setState(() {
@@ -816,6 +822,7 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
     if (!mounted) return;
 
     if (result['success'] == true) {
+      AnalyticsService.citaCreada(servicio.nombre);
       Navigator.pop(context, true);
     } else {
       setState(() {

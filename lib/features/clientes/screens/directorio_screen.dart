@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:vivi_room/core/services/analytics_service.dart';
 import 'package:vivi_room/core/services/api_client.dart';
 import 'package:vivi_room/features/clientes/models/clienta_model.dart';
 import 'package:vivi_room/features/clientes/providers/clientas_provider.dart';
@@ -33,6 +35,17 @@ class _DirectorioScreenView extends StatefulWidget {
 
 class _DirectorioScreenViewState extends State<_DirectorioScreenView> {
   final _searchController = TextEditingController();
+  Timer? _analyticsDebounce;
+
+  void _onSearchChanged(String q, ClientasProvider provider) {
+    provider.setSearchQuery(q);
+    _analyticsDebounce?.cancel();
+    if (q.trim().isNotEmpty) {
+      _analyticsDebounce = Timer(const Duration(milliseconds: 800), () {
+        AnalyticsService.clienteBuscado(q.trim());
+      });
+    }
+  }
 
   Future<void> _abrirDetalle(Clienta clienta) async {
     final editada = await Navigator.of(context).push<bool>(
@@ -115,6 +128,7 @@ class _DirectorioScreenViewState extends State<_DirectorioScreenView> {
 
   @override
   void dispose() {
+    _analyticsDebounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -174,7 +188,7 @@ class _DirectorioScreenViewState extends State<_DirectorioScreenView> {
                     SearchBarWidget(
                       controller: _searchController,
                       hintText: 'Buscar clienta...',
-                      onChanged: provider.setSearchQuery,
+                      onChanged: (q) => _onSearchChanged(q, provider),
                     ),
 
                     const SizedBox(height: 16),

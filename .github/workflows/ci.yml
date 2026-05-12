@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [develop, main, GoogleCalendar, pruebas]
+  pull_request:
+    branches: [develop, main]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  # ─── Backend Tests ────────────────────────────────────────────────────────
+  backend-tests:
+    name: Backend (Jest)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Instalar dependencias
+        working-directory: backend
+        run: npm install
+
+      - name: Correr pruebas unitarias
+        working-directory: backend
+        run: npm test
+
+  # ─── Flutter Tests ────────────────────────────────────────────────────────
+  flutter-tests:
+    name: Flutter (flutter_test)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Configurar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.9'
+          channel: stable
+          cache: true
+
+      - name: Instalar dependencias
+        run: flutter pub get
+
+      - name: Correr pruebas unitarias
+        run: flutter test test/features/auth/providers/auth_provider_test.dart

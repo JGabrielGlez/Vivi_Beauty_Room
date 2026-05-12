@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../core/services/analytics_service.dart';
 import '../../../core/services/api_client.dart';
 import '../../../shared/widgets/status_badge.dart';
 import '../../../shared/widgets/primary_button.dart';
@@ -50,6 +51,7 @@ class _DetalleCitaScreenState extends State<DetalleCitaScreen> {
       'id': '',
     };
     _pago = _cita['anticipoPagado'] == 1;
+    AnalyticsService.citaVista(_cita['id']?.toString() ?? '');
   }
 
   String get _fechaFormateada {
@@ -224,6 +226,7 @@ class _DetalleCitaScreenState extends State<DetalleCitaScreen> {
         final result = await _apiClient.editarCita(id, {'estado': 'CANCELADA'});
         if (!mounted) return;
         if (result['success'] == true) {
+          AnalyticsService.citaCancelada(id);
           _showSnack('Cita cancelada. Anticipo retenido.');
           Navigator.pop(context);
         } else {
@@ -296,6 +299,9 @@ class _DetalleCitaScreenState extends State<DetalleCitaScreen> {
             _SeccionAcciones(
               estado: _cita['estado'] ?? '',
               anticipoPagado: _pago,
+              fechaCita: _cita['fechaHora'] is String
+                  ? DateTime.tryParse(_cita['fechaHora'])
+                  : _cita['fechaHora'] as DateTime?,
               onConfirmar: _confirmarCita,
               onCompletar: _completarCita,
               onReprogramar: _reprogramarCita,
@@ -620,6 +626,7 @@ class _TarjetaNotas extends StatelessWidget {
 class _SeccionAcciones extends StatelessWidget {
   final String estado;
   final bool anticipoPagado;
+  final DateTime? fechaCita;
   final VoidCallback onConfirmar, onCompletar, onReprogramar;
   final VoidCallback onCancelar;
 
@@ -630,7 +637,16 @@ class _SeccionAcciones extends StatelessWidget {
     required this.onCompletar,
     required this.onReprogramar,
     required this.onCancelar,
+    this.fechaCita,
   });
+
+  bool get _esHoy {
+    if (fechaCita == null) return false;
+    final hoy = DateTime.now();
+    return fechaCita!.year == hoy.year &&
+        fechaCita!.month == hoy.month &&
+        fechaCita!.day == hoy.day;
+  }
 
   bool get _puedeCancel => estado != 'CANCELADA' && estado != 'COMPLETADA';
 
@@ -648,13 +664,13 @@ class _SeccionAcciones extends StatelessWidget {
         if (estado == 'CONFIRMADA') ...[
           PrimaryButton(
             text: 'Marcar como completada',
-            onPressed: anticipoPagado ? onCompletar : null,
+            onPressed: anticipoPagado && _esHoy ? onCompletar : null,
           ),
           const SizedBox(height: 12),
         ],
         // Reprogramar: PENDIENTE o CONFIRMADA
         if (estado == 'PENDIENTE' || estado == 'CONFIRMADA') ...[
-          SecondaryButton(text: 'Reprogramar cita', onPressed: onReprogramar),
+          SecondaryButton(text: 'Modificar cita', onPressed: onReprogramar),
           const SizedBox(height: 12),
         ],
         // Cancelar: destructivo con modal de confirmación
