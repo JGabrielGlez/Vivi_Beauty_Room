@@ -9,7 +9,9 @@ import '../../../shared/widgets/primary_button.dart';
 import '../../../shared/widgets/search_bar_widget.dart';
 
 class NuevaCitaModal extends StatefulWidget {
-  const NuevaCitaModal({super.key});
+  final String? servicioPreseleccionadoId;
+
+  const NuevaCitaModal({super.key, this.servicioPreseleccionadoId});
 
   @override
   State<NuevaCitaModal> createState() => _NuevaCitaModalState();
@@ -126,6 +128,9 @@ class _NuevaCitaModalState extends State<NuevaCitaModal> {
             .map((e) => Servicio.fromJson(e))
             .toList();
         _cargando = false;
+        if (widget.servicioPreseleccionadoId != null) {
+          _servicioSeleccionadoId = widget.servicioPreseleccionadoId;
+        }
       });
     } else {
       setState(() {

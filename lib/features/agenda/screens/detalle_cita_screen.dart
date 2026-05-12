@@ -299,6 +299,9 @@ class _DetalleCitaScreenState extends State<DetalleCitaScreen> {
             _SeccionAcciones(
               estado: _cita['estado'] ?? '',
               anticipoPagado: _pago,
+              fechaCita: _cita['fechaHora'] is String
+                  ? DateTime.tryParse(_cita['fechaHora'])
+                  : _cita['fechaHora'] as DateTime?,
               onConfirmar: _confirmarCita,
               onCompletar: _completarCita,
               onReprogramar: _reprogramarCita,
@@ -623,6 +626,7 @@ class _TarjetaNotas extends StatelessWidget {
 class _SeccionAcciones extends StatelessWidget {
   final String estado;
   final bool anticipoPagado;
+  final DateTime? fechaCita;
   final VoidCallback onConfirmar, onCompletar, onReprogramar;
   final VoidCallback onCancelar;
 
@@ -633,7 +637,16 @@ class _SeccionAcciones extends StatelessWidget {
     required this.onCompletar,
     required this.onReprogramar,
     required this.onCancelar,
+    this.fechaCita,
   });
+
+  bool get _esHoy {
+    if (fechaCita == null) return false;
+    final hoy = DateTime.now();
+    return fechaCita!.year == hoy.year &&
+        fechaCita!.month == hoy.month &&
+        fechaCita!.day == hoy.day;
+  }
 
   bool get _puedeCancel => estado != 'CANCELADA' && estado != 'COMPLETADA';
 
@@ -651,7 +664,7 @@ class _SeccionAcciones extends StatelessWidget {
         if (estado == 'CONFIRMADA') ...[
           PrimaryButton(
             text: 'Marcar como completada',
-            onPressed: anticipoPagado ? onCompletar : null,
+            onPressed: anticipoPagado && _esHoy ? onCompletar : null,
           ),
           const SizedBox(height: 12),
         ],

@@ -216,8 +216,9 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
                                             showModalBottomSheet(
                                               isScrollControlled: true,
                                               context: context,
-                                              builder: (context) =>
-                                                  const NuevaCitaModal(),
+                                              builder: (context) => NuevaCitaModal(
+                                                servicioPreseleccionadoId: servicio.id,
+                                              ),
                                             );
                                           },
                                     onEditar: () =>
