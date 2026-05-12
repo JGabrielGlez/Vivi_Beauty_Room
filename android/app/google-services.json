@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "748070412360",
+    "project_id": "vivi-beauty-room",
+    "storage_bucket": "vivi-beauty-room.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:748070412360:android:87965da70ab584c4cb387d",
+        "android_client_info": {
+          "package_name": "com.example.vivi_room"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAPdIsQQZ2QClgYotCk-cc5XkyNbIsYwbo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

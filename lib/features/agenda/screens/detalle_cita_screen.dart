@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../core/services/analytics_service.dart';
 import '../../../core/services/api_client.dart';
 import '../../../shared/widgets/status_badge.dart';
 import '../../../shared/widgets/primary_button.dart';
@@ -50,6 +51,7 @@ class _DetalleCitaScreenState extends State<DetalleCitaScreen> {
       'id': '',
     };
     _pago = _cita['anticipoPagado'] == 1;
+    AnalyticsService.citaVista(_cita['id']?.toString() ?? '');
   }
 
   String get _fechaFormateada {
@@ -224,6 +226,7 @@ class _DetalleCitaScreenState extends State<DetalleCitaScreen> {
         final result = await _apiClient.editarCita(id, {'estado': 'CANCELADA'});
         if (!mounted) return;
         if (result['success'] == true) {
+          AnalyticsService.citaCancelada(id);
           _showSnack('Cita cancelada. Anticipo retenido.');
           Navigator.pop(context);
         } else {

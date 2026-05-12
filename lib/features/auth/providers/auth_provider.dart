@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
+import 'package:vivi_room/core/services/analytics_service.dart';
 import 'package:vivi_room/core/services/api_client.dart';
 import 'package:vivi_room/core/services/token_storage_service.dart';
 import 'package:vivi_room/shared/models/usuario_model.dart';
@@ -89,6 +90,7 @@ class AuthProvider extends ChangeNotifier {
         _state = AuthState.authenticated;
         _errorMessage = null;
         notifyListeners();
+        AnalyticsService.loginExitoso(_usuario!.rol);
         return true;
       } else {
         _state = AuthState.error;
@@ -106,6 +108,7 @@ class AuthProvider extends ChangeNotifier {
 
   /// Cerrar sesión
   Future<void> signOut() async {
+    AnalyticsService.logout();
     await _tokenStorage.clearAll();
     _token = null;
     _usuario = null;
