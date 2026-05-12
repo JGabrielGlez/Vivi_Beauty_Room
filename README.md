@@ -272,10 +272,474 @@ _Taller de Full Stack · 2026_
 
 # 💄 Viviana Beauty Room — Sprint 2
 
+En este proyecto implementamos el servicio de Google Calendar.
 
+# Google Calendar
 
+Es un servicio de calendario en la nube que permite crear, gestionar y sincronizar eventos, citas y recordatorios desde cualquier dispositivo.
+
+---
+
+# ¿Qué es?
+
+Google Calendar es una herramienta de organización personal y profesional que permite:
+
+- Crear eventos y citas
+- Programar reuniones
+- Recibir recordatorios
+- Compartir calendarios con otros usuarios
+- Sincronizar información en tiempo real
+
+---
+
+# ¿Para qué se usa?
+
+Se utiliza principalmente para:
+
+- Gestión de agendas personales
+- Coordinación de reuniones de trabajo
+- Organización de citas médicas o de negocios
+- Planificación de eventos
+- Recordatorios automáticos
+
+---
+
+# Características principales
+
+- 📅 Eventos con fecha y hora
+- 🔔 Notificaciones y recordatorios
+- 👥 Compartir calendarios con otros usuarios
+- 🌐 Acceso desde web y app móvil
+- 🔄 Sincronización automática en múltiples dispositivos
+
+---
+
+# Integración en aplicaciones
+
+Google Calendar también puede integrarse en sistemas externos mediante su API, permitiendo:
+
+- Crear eventos desde una aplicación
+- Actualizar citas automáticamente
+- Eliminar eventos desde el sistema
+- Sincronizar agendas en tiempo real
+
+<details>
+<summary>Ver integración con Google Calendar</summary>
+
+```js
+const { google } = require("googleapis");
+const path = require("path");
+const fs = require("fs");
+
+const CALENDAR_ID = process.env.GOOGLE_CALENDAR_ID || "primary";
+const KEY_PATH = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH;
+
+function getCalendarClient() {
+  const resolvedPath = path.resolve(process.cwd(), KEY_PATH);
+
+  if (!fs.existsSync(resolvedPath)) {
+    throw new Error(
+      `Credenciales de Google Calendar no encontradas en: ${resolvedPath}`,
+    );
+  }
+
+  const auth = new google.auth.GoogleAuth({
+    keyFile: resolvedPath,
+    scopes: ["https://www.googleapis.com/auth/calendar.events"],
+  });
+
+  return google.calendar({ version: "v3", auth });
+}
+
+function buildEventResource(cita, nombreServicio, nombreCliente) {
+  const { fechaHora, duracion, notas, estado, montoAnticipo, anticipoPagado } =
+    cita;
+
+  const startDate = new Date(fechaHora);
+  const endDate = new Date(startDate.getTime() + duracion * 60 * 1000);
+
+  const clienteLabel = nombreCliente || "Sin cliente";
+  const summary = `${nombreServicio} — ${clienteLabel}`;
+
+  const anticipoDesc = montoAnticipo
+    ? `Anticipo: $${montoAnticipo} (${anticipoPagado ? "pagado" : "pendiente"})`
+    : "Sin anticipo";
+
+  const description = [
+    `Estado: ${estado}`,
+    notas ? `Notas: ${notas}` : null,
+    anticipoDesc,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  return {
+    summary,
+    description,
+    start: {
+      dateTime: startDate.toISOString(),
+      timeZone: "America/Mexico_City",
+    },
+    end: {
+      dateTime: endDate.toISOString(),
+      timeZone: "America/Mexico_City",
+    },
+  };
+}
+
+async function createEvent(cita, nombreServicio, nombreCliente) {
+  if (!KEY_PATH) return null;
+  const calendar = getCalendarClient();
+  const resource = buildEventResource(cita, nombreServicio, nombreCliente);
+  const response = await calendar.events.insert({
+    calendarId: CALENDAR_ID,
+    requestBody: resource,
+  });
+  return response.data.id;
+}
+
+async function updateEvent(googleEventId, cita, nombreServicio, nombreCliente) {
+  if (!KEY_PATH || !googleEventId) return;
+  const calendar = getCalendarClient();
+  const resource = buildEventResource(cita, nombreServicio, nombreCliente);
+  await calendar.events.update({
+    calendarId: CALENDAR_ID,
+    eventId: googleEventId,
+    requestBody: resource,
+  });
+}
+
+async function deleteEvent(googleEventId) {
+  if (!KEY_PATH || !googleEventId) return;
+  const calendar = getCalendarClient();
+  await calendar.events.delete({
+    calendarId: CALENDAR_ID,
+    eventId: googleEventId,
+  });
+}
+
+module.exports = { createEvent, updateEvent, deleteEvent };
+```
+
+</details>
+---
+
+![image alt](https://github.com/JGabrielGlez/Vivi_Beauty_Room/blob/3097cf27287e671ba0c7a0638352a059a76dfb83/Captura%20de%20pantalla%202026-05-12%20094828.png)
+# Aplicación multiplataforma
+
+Esta aplicación es **multiplataforma**, lo que significa que puede ejecutarse en diferentes dispositivos utilizando un solo código base.
+
+---
+
+# ¿Qué significa?
+
+Una aplicación multiplataforma es aquella que funciona en:
+
+- 📱 Móviles (Android e iOS)
+- 💻 Web (navegadores)
+- 🖥️ Escritorio (Windows, macOS, Linux)
+
+---
+
+# En esta aplicación
+
+La app está desarrollada con tecnología multiplataforma, lo que permite que la misma interfaz se adapte a distintos dispositivos sin cambiar el código principal.
+
+---
+
+# Evidencia en la interfaz
+
+En la imagen se observa:
+
+## 💻 Versión web
+- Diseño horizontal
+- Más espacio para formularios
+- Elementos distribuidos en pantalla amplia
+
+## 📱 Versión móvil
+- Diseño vertical
+- Elementos apilados
+- Optimizada para pantallas pequeñas
+
+---
+
+# ¿Cómo funciona?
+
+La aplicación se adapta automáticamente usando:
+
+- Layouts responsivos
+- Detección de tamaño de pantalla
+- Widgets adaptables
+
+---
+
+# Ventajas
+
+- 🚀 Un solo código para todas las plataformas
+- 🧠 Menor complejidad de mantenimiento
+- ⚡ Desarrollo más rápido
+- 🎯 Experiencia consistente en todos los dispositivos
+
+---
+
+# Resumen
+
+Esta aplicación es multiplataforma porque un mismo proyecto en Flutter se adapta a web y móvil, ajustando su interfaz según el tamaño de pantalla sin necesidad de desarrollar versiones separadas.
+
+---
+
+## Consumo de API REST
+
+La aplicación Flutter consume la API REST de la siguiente manera:
+
+1. **Servicios en Flutter:**  
+   En la carpeta `lib/`, existen servicios (por ejemplo, en `lib/core/services` o dentro de cada feature) que implementan funciones para interactuar con el backend (`backend/`).
+
+2. **Uso del paquete http:**  
+   Estas funciones utilizan el paquete `http` para enviar peticiones a los endpoints definidos en el backend (por ejemplo, para obtener citas, clientas, servicios, etc.).
+
+3. **Flujo típico:**
+   - El usuario realiza una acción (por ejemplo, ver agenda o crear una cita).
+   - El widget llama a un provider o service.
+   - El service construye la URL del endpoint (ejemplo: `http://localhost:3000/api/citas`).
+   - Se realiza la petición HTTP (`GET`, `POST`, `PUT`, `DELETE`).
+   - Se recibe la respuesta (en formato JSON), se decodifica y se transforma en modelos de Dart (`Cita`, `Clienta`, etc.).
+   - El resultado se pasa a la UI mediante Riverpod.
+
+4. **Respuesta y actualización de UI:**  
+   El backend responde con los datos o el resultado de la operación, y la app actualiza la interfaz según corresponda.
+
+---
+
+**Resumen:**  
+La app Flutter envía peticiones HTTP a los endpoints del backend Node.js, recibe respuestas en JSON, las convierte a modelos de Dart y actualiza la UI usando Riverpod. Todo el consumo de la API está encapsulado en servicios para mantener el código limpio y desacoplado.
 
 # 💄 Viviana Beauty Room — Sprint 3
+
+## Uso de JWT y manejo de sesiones
+<details>
+<summary>Ver código de autenticación (Express)</summary>
+
+```js
+const express = require("express");
+const router = express.Router();
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const db = require("../db/schema"); 
+const authMiddleware = require("../middleware/auth");
+
+// POST /api/auth/login
+router.post("/login", (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ error: "Email y contraseña requeridos" });
+  }
+
+  const usuario = db
+    .prepare("SELECT * FROM usuarios WHERE email = ?")
+    .get(email);
+
+  if (!usuario) {
+    return res.status(401).json({ error: "Credenciales incorrectas" });
+  }
+
+  const passwordValido = bcrypt.compareSync(password, usuario.passwordHash);
+  if (!passwordValido) {
+    return res.status(401).json({ error: "Credenciales incorrectas" });
+  }
+
+  const token = jwt.sign(
+    {
+      idUsuario: usuario.idUsuario,
+      nombre: usuario.nombre,
+      email: usuario.email,
+      rol: usuario.rol,
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRES_IN || "7d" },
+  );
+
+  return res.json({
+    token,
+    usuario: {
+      idUsuario: usuario.idUsuario,
+      nombre: usuario.nombre,
+      email: usuario.email,
+      rol: usuario.rol,
+    },
+  });
+});
+
+// GET /api/auth/me
+router.get("/me", authMiddleware, (req, res) => {
+  const usuario = db
+    .prepare(
+      "SELECT idUsuario, nombre, email, rol FROM usuarios WHERE idUsuario = ?",
+    )
+    .get(req.user.idUsuario);
+
+  if (!usuario) return res.status(404).json({ error: "Usuario no encontrado" });
+
+  return res.json(usuario);
+});
+
+// PUT /api/auth/change-password
+router.put("/change-password", authMiddleware, (req, res) => {
+  const { passwordActual, passwordNueva } = req.body;
+
+  if (!passwordActual || !passwordNueva) {
+    return res.status(400).json({ error: "Contraseña actual y nueva son requeridas" });
+  }
+
+  if (passwordNueva.length < 6) {
+    return res.status(400).json({ error: "La nueva contraseña debe tener al menos 6 caracteres" });
+  }
+
+  const usuario = db
+    .prepare("SELECT * FROM usuarios WHERE idUsuario = ?")
+    .get(req.user.idUsuario);
+
+  if (!usuario) {
+    return res.status(404).json({ error: "Usuario no encontrado" });
+  }
+
+  const valida = bcrypt.compareSync(passwordActual, usuario.passwordHash);
+  if (!valida) {
+    return res.status(400).json({ error: "La contraseña actual es incorrecta" });
+  }
+
+  const nuevoHash = bcrypt.hashSync(passwordNueva, 10);
+  db.prepare("UPDATE usuarios SET passwordHash = ? WHERE idUsuario = ?")
+    .run(nuevoHash, req.user.idUsuario);
+
+  return res.json({ mensaje: "Contraseña actualizada correctamente" });
+});
+
+module.exports = router;
+```
+
+</details>
+
+<details>
+<summary>Ver middleware de autenticación JWT</summary>
+
+```js
+const jwt = require('jsonwebtoken');
+
+module.exports = (req, res, next) => {
+  const token = req.headers.authorization?.split('Bearer ')[1];
+  if (!token) return res.status(401).json({ error: 'Sin token' });
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded; // { idUsuario, nombre, rol, email }
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Token inválido o expirado' });
+  }
+};
+```
+
+</details>
+
+
+En este sistema se utiliza JSON WEB TOKEN (JWT) para manejar autenticación sin guardar sesiones en el servidor.
+
+---
+
+# 1. Login (generación del token)
+
+- El usuario envía email y contraseña
+- El servidor valida los datos
+- Si son correctos, genera un JWT
+
+```js
+jwt.sign(
+  { idUsuario, nombre, email, rol },
+  process.env.JWT_SECRET,
+  { expiresIn: "7d" }
+);
+```
+
+📌 El token representa la “sesión” del usuario.
+
+---
+
+# 2. Cliente
+
+- Guarda el token
+- Lo envía en cada petición:
+
+```http
+Authorization: Bearer TOKEN
+```
+
+---
+
+# 3. Middleware de autenticación
+
+```js
+const token = req.headers.authorization?.split('Bearer ')[1];
+```
+
+- Extrae el token del header
+- Lo valida con `jwt.verify()`
+- Si es válido → agrega `req.user`
+- Si no → responde 401
+
+---
+
+# 4. Uso en rutas protegidas
+
+```js
+req.user
+```
+
+📌 Permite acceder a los datos del usuario autenticado.
+
+---
+
+# 5. Flujo general
+
+```text
+Login → genera JWT
+Cliente guarda token
+Request → envía token
+Middleware → valida token
+Rutas → usan req.user
+```
+
+---
+
+# 6. Tipo de autenticación
+
+- ❌ No hay sesiones en servidor
+- ✔ El JWT funciona como sesión
+
+---
+
+# 7. Idea clave
+
+JWT permite un sistema **stateless**, donde el servidor solo valida tokens y no almacena sesiones.
+
+# Configuración de cors
+```js
+const corsOptions = {
+  origin: "http://localhost:25469",
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true
+};
+
+app.use(cors(corsOptions));
+```
+
+- 🌐 Solo permite acceso desde `http://localhost:25469`
+- 📡 Permite métodos GET, POST, PUT y DELETE
+- 🔐 Autoriza headers como Content-Type y Authorization
+- 🍪 Permite envío de credenciales (cookies/tokens)
+- 🚀 Se aplica globalmente a la API
 
 
 
@@ -1741,10 +2205,196 @@ El uso de mocks permite:
 - Simulación de distintos escenarios.
 - Mayor confiabilidad del sistema de autenticación.
 
-#Evidencias
+# Evidencias
+![image alt](https://github.com/JGabrielGlez/Vivi_Beauty_Room/blob/b61184906772f5ed98939ad1c3492df8ad70b2c2/e613aaff-def2-4ed3-9556-c81d3d40a4d0.jpg)
+
+![image alt](https://github.com/JGabrielGlez/Vivi_Beauty_Room/blob/b61184906772f5ed98939ad1c3492df8ad70b2c2/77e285dc-833c-47fa-a1ed-3c7a83b81b89.jpg)
 
 
 # 💄 Viviana Beauty Room — Sprint 5
 
+# AnalyticsService
 
+```dart
+import 'package:firebase_analytics/firebase_analytics.dart';
+
+class AnalyticsService {
+  static final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
+
+  static FirebaseAnalyticsObserver get observer =>
+      FirebaseAnalyticsObserver(analytics:: _analytics);
+
+  // ─── Auth ────────────────────────────────────────────────────────────────
+  static Future<void> loginExitoso(String rol) async {
+    await _analytics.logEvent(
+      name: 'login_exitoso',
+      parameters: {'rol': rol},
+    );
+  }
+
+  static Future<void> logout() async {
+    await _analytics.logEvent(name: 'logout');
+  }
+
+  // ─── Citas ───────────────────────────────────────────────────────────────
+  static Future<void> citaCreada(String servicio) async {
+    await _analytics.logEvent(
+      name: 'cita_creada',
+      parameters: {'servicio': servicio},
+    );
+  }
+
+  static Future<void> citaCancelada(String idCita) async {
+    await _analytics.logEvent(
+      name: 'cita_cancelada',
+      parameters: {'id_cita': idCita},
+    );
+  }
+
+  static Future<void> citaVista(String idCita) async {
+    await _analytics.logEvent(
+      name: 'cita_vista',
+      parameters: {'id_cita': idCita},
+    );
+  }
+
+  // ─── Clientes ────────────────────────────────────────────────────────────
+  static Future<void> clienteRegistrado() async {
+    await _analytics.logEvent(name: 'cliente_registrado');
+  }
+
+  static Future<void> clienteBuscado(String termino) async {
+    await _analytics.logEvent(
+      name: 'cliente_buscado',
+      parameters: {'termino': termino},
+    );
+  }
+
+  // ─── Servicios ───────────────────────────────────────────────────────────
+  static Future<void> servicioVisto(String nombreServicio) async {
+    await _analytics.logEvent(
+      name: 'servicio_visto',
+      parameters: {'servicio': nombreServicio},
+    );
+  }
+}
+```
+
+# AnalyticsService
+
+Este código centraliza el uso de :contentReference[oaicite:0]{index=0} Analytics para registrar eventos de la aplicación Flutter.
+
+---
+
+# ¿Qué hace?
+
+Permite enviar eventos de comportamiento del usuario como:
+
+- Inicio de sesión
+- Cierre de sesión
+- Creación de citas
+- Cancelación de citas
+- Búsqueda de clientes
+- Visualización de servicios
+
+---
+
+# Instancia de Firebase
+
+```dart
+static final FirebaseAnalytics _analytics =
+    FirebaseAnalytics.instance;
+```
+
+📌 Usa una instancia global de Firebase Analytics (singleton).
+
+---
+
+# Observer de navegación
+
+```dart
+static FirebaseAnalyticsObserver get observer =>
+    FirebaseAnalyticsObserver(analytics: _analytics);
+```
+
+📌 Registra automáticamente cambios de pantalla en la app.
+
+---
+
+# Método principal
+
+```dart
+_analytics.logEvent()
+```
+
+📌 Envía eventos personalizados a Firebase Analytics.
+
+---
+
+# Eventos principales
+
+## Auth
+
+- `login_exitoso` → registra inicio de sesión con rol
+- `logout` → registra cierre de sesión
+
+---
+
+## Citas
+
+- `cita_creada` → creación de una cita
+- `cita_cancelada` → cancelación de cita
+- `cita_vista` → visualización de cita
+
+---
+
+## Clientes
+
+- `cliente_registrado` → nuevo cliente
+- `cliente_buscado` → búsqueda de clientes
+
+---
+
+## Servicios
+
+- `servicio_visto` → visualización de servicios
+
+---
+
+# Estructura del evento
+
+```json
+{
+  "event": "nombre_evento",
+  "parametros": {}
+}
+```
+
+---
+
+# Flujo de funcionamiento
+
+```text
+Usuario realiza acción
+        ↓
+AnalyticsService
+        ↓
+Firebase Analytics (logEvent)
+        ↓
+Dashboard de Firebase
+```
+
+---
+
+# Idea principal
+
+Este servicio funciona como una **capa de analítica (data layer)** que:
+
+- Centraliza todos los eventos
+- Evita usar Firebase directamente en la UI
+- Mantiene consistencia en los nombres
+- Facilita mantenimiento y escalabilidad
+
+---
+```
 
