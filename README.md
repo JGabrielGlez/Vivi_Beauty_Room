@@ -280,6 +280,9 @@ _Taller de Full Stack · 2026_
 
 
 # 💄 Viviana Beauty Room — Sprint 4
+
+
+
 # Tests Middleware Auth
 
 ```javascript
