@@ -269,3 +269,23 @@ Para ver las pruebas de usuario realizadas durante el desarrollo, consulta el si
 ---
 
 _Taller de Full Stack · 2026_
+
+# 💄 Viviana Beauty Room — Sprint 2
+
+
+
+
+# 💄 Viviana Beauty Room — Sprint 3
+
+
+
+# 💄 Viviana Beauty Room — Sprint 4
+
+
+
+
+
+# 💄 Viviana Beauty Room — Sprint 5
+
+
+
