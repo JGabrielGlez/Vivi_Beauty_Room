@@ -427,6 +427,273 @@ describe('Middleware: auth', () => {
 });
 ```
 
+# Explicación del código de pruebas del middleware JWT
+
+Este código es un conjunto de pruebas unitarias realizado con Jest para validar el funcionamiento de un middleware de autenticación JWT en un backend desarrollado con Express.js. El objetivo principal es comprobar que el middleware maneje correctamente distintos escenarios relacionados con la autenticación mediante tokens JWT, permitiendo el acceso únicamente a usuarios autenticados y rechazando solicitudes inválidas o maliciosas.
+
+---
+
+## Configuración inicial
+
+Al inicio del código se define la variable de entorno:
+
+```javascript
+process.env.JWT_SECRET = 'test_secret';
+```
+
+Esta clave secreta se utiliza para firmar y verificar los tokens JWT durante las pruebas.
+
+Posteriormente se importan dos módulos:
+
+```javascript
+const jwt = require('jsonwebtoken');
+const authMiddleware = require('../../src/middleware/auth');
+```
+
+- `jsonwebtoken`: librería usada para crear y validar tokens JWT.
+- `authMiddleware`: middleware que se desea probar.
+
+---
+
+## Bloque describe()
+
+```javascript
+describe('Middleware: auth', () => {
+```
+
+La función `describe()` agrupa todas las pruebas relacionadas con el middleware de autenticación.
+
+---
+
+## Variables simuladas
+
+```javascript
+let req, res, next;
+```
+
+Estas variables simulan los objetos de Express:
+
+| Variable | Función |
+|---|---|
+| `req` | Representa la petición HTTP |
+| `res` | Representa la respuesta del servidor |
+| `next` | Continúa al siguiente middleware |
+
+---
+
+## beforeEach()
+
+```javascript
+beforeEach(() => {
+```
+
+Se ejecuta antes de cada prueba para reinicializar los objetos simulados y asegurar que cada test empiece limpio.
+
+### Simulación de req
+
+```javascript
+req = { headers: {} };
+```
+
+Simula una petición HTTP con headers vacíos.
+
+### Simulación de res
+
+```javascript
+res = {
+  status: jest.fn().mockReturnThis(),
+  json: jest.fn(),
+};
+```
+
+- `jest.fn()` crea funciones simuladas.
+- `mockReturnThis()` permite encadenar:
+
+```javascript
+res.status(401).json(...)
+```
+
+### Simulación de next
+
+```javascript
+next = jest.fn();
+```
+
+Permite verificar si el middleware continúa correctamente.
+
+---
+
+# Pruebas realizadas
+
+---
+
+## 1. Sin header Authorization
+
+```javascript
+test('sin header Authorization → 401 Sin token'
+```
+
+Esta prueba verifica que si no existe el header `Authorization`, el middleware debe responder:
+
+```javascript
+401
+{ error: 'Sin token' }
+```
+
+También se valida que `next()` no haya sido llamado.
+
+---
+
+## 2. Header sin Bearer
+
+```javascript
+req.headers.authorization = 'TokenSinPrefijo';
+```
+
+El middleware espera el formato:
+
+```http
+Authorization: Bearer TOKEN
+```
+
+Como el formato es incorrecto, debe responder:
+
+```javascript
+401
+{ error: 'Sin token' }
+```
+
+---
+
+## 3. Token válido
+
+### Payload
+
+```javascript
+const payload = {
+  idUsuario: 1,
+  nombre: 'Viviana',
+  rol: 'ADMIN',
+  email: 'v@test.com'
+};
+```
+
+Se crea información del usuario para incluirla dentro del JWT.
+
+### Generación del token
+
+```javascript
+const token = jwt.sign(payload, 'test_secret');
+```
+
+Se genera un token válido usando la clave secreta.
+
+### Authorization header
+
+```javascript
+req.headers.authorization = `Bearer ${token}`;
+```
+
+Se simula una petición autenticada.
+
+### Verificaciones
+
+```javascript
+expect(next).toHaveBeenCalled();
+```
+
+Comprueba que el middleware permitió el acceso.
+
+```javascript
+expect(req.user).toMatchObject(payload);
+```
+
+Verifica que el usuario autenticado se guardó en:
+
+```javascript
+req.user
+```
+
+---
+
+## 4. Token con firma incorrecta
+
+```javascript
+jwt.sign({ idUsuario: 1 }, 'firma_incorrecta');
+```
+
+El token fue firmado con otra clave distinta a `JWT_SECRET`.
+
+El middleware debe rechazarlo devolviendo:
+
+```javascript
+401
+{ error: 'Token inválido o expirado' }
+```
+
+---
+
+## 5. Token expirado
+
+```javascript
+{ expiresIn: -1 }
+```
+
+Se crea un token ya expirado.
+
+El middleware debe detectar esta condición y responder:
+
+```javascript
+401
+{ error: 'Token inválido o expirado' }
+```
+
+---
+
+## 6. Token malformado
+
+```javascript
+'Bearer esto.no.es.un.jwt'
+```
+
+Se envía una cadena inválida que no corresponde a un JWT real.
+
+El middleware debe manejar el error correctamente sin romper la aplicación y responder:
+
+```javascript
+401
+{ error: 'Token inválido o expirado' }
+```
+
+---
+
+# Flujo del middleware
+
+```plaintext
+Request
+ ↓
+Authorization Header
+ ↓
+JWT Verify
+ ↓
+¿válido?
+ ├── Sí → next()
+ └── No → 401
+```
+
+---
+
+# Conclusión
+
+Este archivo de pruebas garantiza que el middleware JWT funcione correctamente bajo diferentes condiciones, tanto válidas como inválidas. Además, demuestra buenas prácticas de testing como el uso de mocks, pruebas unitarias aisladas y validación de escenarios positivos y negativos.
+
+Gracias a estas pruebas es posible asegurar que:
+
+- solo usuarios autenticados accedan a rutas protegidas,
+- los tokens inválidos sean rechazados,
+- los tokens expirados no puedan reutilizarse,
+- y la API mantenga un comportamiento seguro y estable.
+
 
 
 
