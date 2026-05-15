@@ -34,6 +34,9 @@ app.use("/api/agenda", require("./src/routes/agenda"));
 app.use("/api/citas", require("./src/routes/citas"));
 app.use("/api/servicios", authMiddleware, require("./src/routes/servicios"));
 app.use("/api/clientas", authMiddleware, require("./src/routes/clientas"));
+// Admin routes for uploading/downloading the SQLite database file.
+// Protected by the `DB_ADMIN_SECRET` header (x-db-admin-secret) or `JWT_SECRET`.
+app.use("/api/admin", require("./src/routes/admin"));
 
 // --- PRUEBAS (descomentar para desarrollo sin auth) ---
 // app.use("/api/servicios", require("./src/routes/servicios"));

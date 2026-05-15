@@ -7,7 +7,17 @@ class ApiConfig {
   // Dispositivo físico: pasar la IP de tu PC con --dart-define=API_HOST=192.168.1.XX
   static const String _physicalHost = String.fromEnvironment('API_HOST');
 
+  // URL del backend en producción (Render)
+  static const String _productionUrl = String.fromEnvironment(
+    'PRODUCTION_URL',
+    defaultValue: '',
+  );
+
   static String get baseUrl {
+    if (_productionUrl.isNotEmpty) {
+      return '$_productionUrl/api';
+    }
+
     if (_physicalHost.isNotEmpty) {
       return 'http://$_physicalHost:3000/api';
     }
